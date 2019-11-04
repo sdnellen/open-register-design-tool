@@ -42,6 +42,7 @@ ext_parm_defs
    | 'default_base_map_name' EQ STR
    | 'allow_unordered_addresses' EQ bool
    | 'debug_mode' EQ STR
+   | 'perl_path' EQ STR
    ;
 
 // ------------ rdl_in_defs

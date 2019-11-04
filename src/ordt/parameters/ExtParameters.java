@@ -5,6 +5,7 @@ package ordt.parameters;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import ordt.parse.parameters.ExtParmsParser;
  *
  */
 public class ExtParameters extends ExtParmsBaseListener  {
+	private static boolean windows;
 	private static List<String> parmFiles;
 
 	// standard typed parameter set
@@ -71,6 +73,7 @@ public class ExtParameters extends ExtParmsBaseListener  {
 	/** initialize all parameters */
 	public static void init() {
 		
+		windows = System.getProperty("os.name").toLowerCase().contains("windows");
 		// ---- global defaults
 		params.put("min_data_size", new ExtIntegerParameter("min_data_size", 32) {  // special handling for min_data_size
 			@Override
@@ -108,7 +111,21 @@ public class ExtParameters extends ExtParmsBaseListener  {
 				} 
 			}
 		});
-		
+		java.nio.file.Path p = null;
+		String sep = windows ? ";" : ":";
+		for (String dir : System.getenv("PATH").split(sep)) {
+			p = windows ? Paths.get(dir, "perl.exe") : Paths.get(dir, "perl");
+			if (p.toFile().canExecute()) {
+				break;
+			} else {
+				p = null;
+			}
+		}
+		if (p != null)
+			initStringParameter("perl_path", p.toString());
+		else
+			initStringParameter("perl_path", "");
+		//System.out.println(p.toString());
 		// ---- rdl input defaults
 		initStringListParameter("process_component", new ArrayList<String>());
 		initBooleanParameter("resolve_reg_category", false); 
@@ -625,6 +642,13 @@ public class ExtParameters extends ExtParmsBaseListener  {
 	 */
 	public static String defaultBaseMapName() {
 		return getStringParameter("default_base_map_name");
+	}
+
+	/** get perlPath
+	 *  @return the perlPath
+	 */
+	public static String perlPath() {
+		return getStringParameter("perl_path");
 	}
 
 	/** return true if specified debug mode is set */

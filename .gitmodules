@@ -1,0 +1,3 @@
+[submodule "src/System-RDL-preprocess"]
+	path = src/System-RDL-preprocess
+	url = https://github.com/gxwcxl2010/System-RDL-preprocess.git

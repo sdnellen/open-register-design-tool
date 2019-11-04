@@ -7,6 +7,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.io.BufferedReader;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -70,8 +76,26 @@ public class RdlModelExtractor extends SystemRDLBaseListener implements RegModel
         this.rdlInputFile = rdlFile;  // save rdl file
        
         try {
-        	InputStream is = System.in;
-        	if ( rdlFile!=null ) is = new FileInputStream(rdlInputFile);
+			InputStream is = System.in;
+			Process process = null;
+			File tmpfile = null;
+			if ( rdlFile != null ) { //is = new FileInputStream(rdlInputFile);
+				String tempDir = System.getProperty("java.io.tmpdir");
+				tmpfile = new File(tempDir, "rdl_prepro.pl");
+				if (!tmpfile.exists()) {
+					InputStream link = (getClass().getResourceAsStream("/rdl_prepro.pl"));
+					Path p = tmpfile.getAbsoluteFile().toPath();
+					Files.copy(link, p);
+					String rdl_prepro = p.toString();
+					System.out.println(rdl_prepro);
+
+					ProcessBuilder builder = new ProcessBuilder(ExtParameters.perlPath(), rdl_prepro, "-c", rdlInputFile);
+					builder.inheritIO().redirectOutput(ProcessBuilder.Redirect.PIPE);
+					process = builder.start();
+
+					is = process.getInputStream();
+				}
+			}
         
         	ANTLRInputStream input = new ANTLRInputStream(is);
         	SystemRDLLexer lexer = new SystemRDLLexer(input);
@@ -89,8 +113,13 @@ public class RdlModelExtractor extends SystemRDLBaseListener implements RegModel
         	//System.out.println("buffered size=" + toks2.size());
 
         	SystemRDLParser parser; // = new SystemRDLParser(null);
-        	parser = new SystemRDLParser(tokens);
-
+			parser = new SystemRDLParser(tokens);
+			if (process != null)
+				process.destroy();
+			if (is != System.in)
+				is.close();
+			if (tmpfile != null)
+				tmpfile.delete();
         	ParseTree tree = parser.root(); //compilationUnit(); // parse
         	//System.out.println(tree.toStringTree());
         	ParseTreeWalker walker = new ParseTreeWalker(); // create standard

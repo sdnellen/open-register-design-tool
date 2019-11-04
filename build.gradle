@@ -81,6 +81,9 @@ shadowJar {
 	    attributes 'Main-Class': 'ordt.extract.Ordt'
     }
 
+    from ('src/System-RDL-preprocess') {
+        include 'rdl_prepro.pl'
+    }
     dependencies {
 	// The antlr plugin adds the entire library to the jar file,
 	// not just the runtime, so remove this dependency. The runtime
