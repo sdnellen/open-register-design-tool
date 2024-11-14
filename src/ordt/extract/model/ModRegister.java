@@ -17,7 +17,7 @@ import ordt.parameters.ExtParameters;
 /** register class extracted from definition lang */
 public class ModRegister extends ModComponent  {
 
-	private int padBits = 0;  // number of unused bits in this reg / used to compute field offsets for inputs that allow pad (jspec) 
+	private int bitsAssigned = 0; // number of bits assigned in this reg / used to compute field offsets for inputs that allow padding and relative offsets (jspec packs fields from top of reg so regwidth dependent) 
 	public static int defaultWidth = 32;
 	private int width = defaultWidth;
 
@@ -88,7 +88,7 @@ public class ModRegister extends ModComponent  {
 		super.display();
 		// display reg properties
 		System.out.println("    register properties:");
-		System.out.println("        pad bits=" + this.getPadBits() + "   alignedsize=" + alignedSize);
+		System.out.println("        bitsAssigned=" + this.getBitsAssigned() + "   alignedSize=" + alignedSize);
 	}
 
 	/** return regnumber containing size in bytes of this component assuming js alignment rules */
@@ -97,44 +97,35 @@ public class ModRegister extends ModComponent  {
 		return alignedSize;
 	}
 	
-	/** compute aligned size of this reg in bytes. if reg has no assigned size, assign default determined by ancestors.
-	 * also set pad bits if generating from jspec  */
+	/** compute aligned size of this reg in bytes. if reg has no assigned size, assign default determined by ancestors */
 	@Override
 	public void setAlignedSize(int defaultRegWidth) {
 		// if already computed then exit
 		if (alignedSize != null) return;
 		// set reg width if it's not explicitly defined
+		//if (getId().equals("ea_host_misc_mqss_int_reg")) System.out.println("ModRegister setAlignedSize, register instance=" + getId() + ", hasProperty(regwidth)=" + hasProperty("regwidth") + ", defaultRegWidth=" + defaultRegWidth);
 		int regWidth = hasProperty("regwidth")? getIntegerProperty("regwidth") : defaultRegWidth;  
 		setWidth(regWidth);  // save regWidth
 		// get reg width in bytes
 		int regByteWidth = regWidth/8;
 		// add all child sizes
 		RegNumber newMinSize = new RegNumber(regByteWidth);
-		//System.out.println("ModRegister setMinSize, register instance=" + getId() + ", regwidth=" + newMinSize);
+		//if (getId().equals("int_status")) System.out.println("ModRegister setAlignedSize, register instance=" + getId() + ", newMinSize=" + newMinSize);
 		newMinSize.setNextHighestPowerOf2();  // round to next power of 2
-		//System.out.println("ModRegister setMinSize, register instance=" + getId() + ", regwidth=" + newMinSize);
+		//if (getId().equals("ea_host_misc_mqss_int_reg")) System.out.println("ModRegister setAlignedSize, register instance=" + getId() + ", newMinSize=" + newMinSize);
 		this.alignedSize = newMinSize;
-		// if a jspec defined register, compute bit padding
-		int bitsAssigned = this.getPadBits();  // js extract saves bitsAssigned here, which is overwritten
-		if (bitsAssigned > 0) {  // only js extracted can be non-zero
-			Integer bitPadding = regWidth - bitsAssigned; 
-			//System.out.println("JSpecModelExtractor exitRegister_def: padding needed for reg " + activeCompDefs.peek().getId() + ", w=" + registerWidth + ",assigned=" + bitsAssigned);
-			this.setPadBits(bitPadding);  // save req'd reg padding in comp - used in regProperties to set field offsets
-		}
 	}
 	
-	public int getPadBits() {
-		return padBits;
+	/** return bits assigned when using a relative field offset input type like jspec.  will be used to compute absolute field bit locations */
+	public int getBitsAssigned() {
+		return bitsAssigned;
+	}	
+
+	/** save bits assigned when using a relative field offset input type like jspec.  will be used to compute absolute field bit locations */
+	public void setBitsAssigned(int bitsAssigned) {
+		this.bitsAssigned = bitsAssigned;
 	}
 
-	public void setPadBits(int padBits) {
-		this.padBits = padBits;
-	}
-
-	/** save bits assigned in a jspec extract to calculate bit padding in setAlignedSize */
-	public void saveBitsAssignedAsPadBits(int bitsAssigned) {
-		this.padBits = bitsAssigned;
-	}
 	
 	// ------------------------------------ code gen templates ----------------------------------------
 
@@ -212,7 +203,7 @@ public class ModRegister extends ModComponent  {
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + padBits;
+		result = prime * result + bitsAssigned;
 		result = prime * result + width;
 		return result;
 	}
@@ -227,7 +218,7 @@ public class ModRegister extends ModComponent  {
 		if (getClass() != obj.getClass())
 			return false;
 		ModRegister other = (ModRegister) obj;
-		if (padBits != other.padBits)
+		if (bitsAssigned != other.bitsAssigned)
 			return false;
 		if (width != other.width)
 			return false;

@@ -559,9 +559,9 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 	@Override public void exitRegister_def(JSpecParser.Register_defContext ctx) { 
 		activeRules.remove(ctx.getRuleIndex());
 		//activeCompDefs.peek().display(null, null, true);
-		// save the bitsAssigned - will use to set bit padding in AlignedSize calculation when register size is known
+		// save the bitsAssigned - will use to set bit padding in output gen register instance size is known
 		Integer bitsAssigned = fieldOffsets.peek();
-		((ModRegister) activeCompDefs.peek()).saveBitsAssignedAsPadBits(bitsAssigned);  // save req'd reg padding in comp - used in regProperties to set field offsets
+		((ModRegister) activeCompDefs.peek()).setBitsAssigned(bitsAssigned);  // save req'd reg padding in comp - used in regProperties to set field offsets
 		exitComponentDefinition();
 		fieldOffsets.pop();
 	}
