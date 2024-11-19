@@ -106,7 +106,7 @@ enum_field_def
 
 /* HSL0 = 0 "HSL channel 0"; */
 enum_value_assign
-   : id EQ num_expression (str | jstr)
+   : (id | defined_attribute) EQ num_expression (str | jstr)  // allow defined_attribute reserved strings to be used as enum states
      SEMI 
    ;  
    
@@ -133,7 +133,7 @@ value_assign
    
  /* */   
 typedef_instance
-   : id id str 
+   : id id (str | jstr)
      param_block?
      SEMI
   ;
@@ -220,8 +220,10 @@ defined_attribute
    | 'SKIP_ADDRESS'
    | 'SKIP_ADDRESS_AND_CHILDREN'
    | 'SKIP_REGISTER_SET_SIZE'
+   | 'SKIP'
    | 'MANUAL'
    | 'STANDARD'
+   | 'DISABLE'
 //   | jspec_attribute
    ;  
 

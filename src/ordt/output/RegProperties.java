@@ -423,7 +423,7 @@ public class RegProperties extends AddressableInstanceProperties {
 		Integer width = fieldProperties.getFieldWidth(); 
 		Integer offset = fieldProperties.getExtractInstance().getOffset();  // get the relative offset of this field
 		Integer bitPaddingOffset = getRegWidth() - ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
-		if (getId().equals("int_status")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", offset=" + offset + ", width=" + width + ", fsetOffset=" + fieldSetOffset + ", bitPaddingOffset=" + bitPaddingOffset + ", regwidth=" + getRegWidth() + ", highAvailableIdx=" + highAvailableIdx);
+		//if (getId().equals("int_status")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", offset=" + offset + ", width=" + width + ", fsetOffset=" + fieldSetOffset + ", bitPaddingOffset=" + bitPaddingOffset + ", regwidth=" + getRegWidth() + ", highAvailableIdx=" + highAvailableIdx);
 		
 		// compute the actual field index  
 		Integer lowFieldIndex = 0;
@@ -437,7 +437,7 @@ public class RegProperties extends AddressableInstanceProperties {
 		if (lowFieldIndex == null) {
 			MsgUtils.errorExit("Unable to fit all fields in " + getRegWidth() + "b register instance " + getInstancePath());
 		}
-		if (getId().equals("int_status")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", adding at reg lowFieldIndex=" + lowFieldIndex);
+		//if (getId().equals("int_status")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", adding at reg lowFieldIndex=" + lowFieldIndex);
 		fieldCount++;  // bump the field count
 		return lowFieldIndex;   
 	}
