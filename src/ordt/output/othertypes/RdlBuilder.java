@@ -341,6 +341,12 @@ public class RdlBuilder extends OutputBuilder {
 		if (field.isSwWriteable()) accessModeStr += "w";
 		if (accessModeStr == null) accessModeStr = "na";
 		accessModeStr = "sw=" + accessModeStr + "; ";
+		if (field.isHwReadable() || field.isHwWriteable()) {
+			accessModeStr += "hw=";
+			if (field.isHwReadable()) accessModeStr += "r";
+			if (field.isHwWriteable()) accessModeStr += "w";
+			accessModeStr += "; ";
+		}
 		// set read/write clear/set options
 		if (field.isWoclr()) accessModeStr += "woclr;";   
 		else if (field.isWoset()) accessModeStr += "woset;";    

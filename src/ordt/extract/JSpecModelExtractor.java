@@ -861,7 +861,10 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 			modComp.setProperty("category", value, 0);  // set category
 			// detect volatile categories
 			if (value.contains("INTERRUPT")) modComp.setDefaultProperty("intr", "true");
-			else if (value.contains("STATE")) modComp.setDefaultProperty("hw", "w");
+			else if (value.contains("STATE") && !modComp.hasProperty("hw")) {
+				//if (modComp.hasProperty("hw")) System.out.println("JSpecModelExtractor saveJSpecParam: state category has hw property in " + modComp.getFullId() + ", modComp.getProperty(\"hw\")" + modComp.getProperty("hw"));
+				modComp.setDefaultProperty("hw", "w");  // set hw to w for state regs (if not already set by write_only access type or unknown reset cases)
+			}
 			else if (value.contains("COUNTER")) modComp.setDefaultProperty("counter", "true");
 		}
 		
@@ -970,6 +973,7 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 		
 		else if (parm.equals("access_mode")) {
 			String swVal = null;
+			String hwVal = null;
 			String rVal = null;
 			String wVal = null;
 			//Boolean setHwWrite = false;
@@ -983,6 +987,7 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 			    break;
 			case ("WRITE_ONLY"): 
 				swVal = "w";
+				hwVal = "r";
 			    break;
 			case ("CLEAR_ON_READ"): 
 			case ("READ_TO_CLEAR"): 
@@ -1005,11 +1010,13 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 			if (isTypeDefInstance) {  // set as default if not an instance
 				//System.out.println("JSpecModelExtractor: saveJSpecParam, p=" + parm + ",  v=" + value + ",  num=" + lastResolvedNum); 
 				activeInstances.peek().setDefaultProperty("sw", swVal); // was setProperty(("sw", swVal, 0)
+				if (hwVal != null) activeInstances.peek().setDefaultProperty("hw", hwVal);
 				if (rVal != null) activeInstances.peek().setDefaultProperty(rVal, "true"); 
 				if (wVal != null) activeInstances.peek().setDefaultProperty(wVal, "true");
 			}
 			else {
 				activeCompDefs.peek().setDefaultProperty("sw", swVal); 
+				if (hwVal != null) activeCompDefs.peek().setDefaultProperty("hw", hwVal); 
 				if (rVal != null) activeCompDefs.peek().setDefaultProperty(rVal, "true");
 				if (wVal != null) activeCompDefs.peek().setDefaultProperty(wVal, "true");
 			}
