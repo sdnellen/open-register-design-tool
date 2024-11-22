@@ -193,6 +193,34 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 		activeRules.remove(ctx.getRuleIndex());	
 		lastResolvedArrayIndex = (lastResolvedNum != null) ? lastResolvedNum.toInteger() : null;  // get last resolved integer index
 	}
+	/**
+	 */
+	@Override public void enterConstant_field_instance(JSpecParser.Constant_field_instanceContext ctx) { 
+		activeRules.add(ctx.getRuleIndex());   
+		String fldId = ctx.getChild(0).getText();
+		//System.out.println("JSpecModelExtractor enterConstant_field_instance: field width assign detected, const=" + activeConstantId + ", fldid=" + fldId);
+		Integer fldWidth = findFieldWidth(fldId);
+		if (fldWidth != null) {
+			accumulated_constant_width += fldWidth;
+			//System.out.println("JSpecModelExtractor enterConstant_field_instance: setting width of " + activeConstantId +  " to " + accumulated_constant_width);
+		}
+		else MsgUtils.warnMessage("Width of field/fieldset " + fldId + " in constant " + activeConstantId + " could not be resolved"); 
+	}
+	
+	@Override public void exitConstant_field_instance(JSpecParser.Constant_field_instanceContext ctx) { 
+		activeRules.remove(ctx.getRuleIndex());	
+	}
+
+	/**
+	 */
+	@Override public void enterConstant_field_set_def(JSpecParser.Constant_field_set_defContext ctx) { 
+		activeRules.add(ctx.getRuleIndex());   
+
+	}
+	
+	@Override public void exitConstant_field_set_def(JSpecParser.Constant_field_set_defContext ctx) { 
+		activeRules.remove(ctx.getRuleIndex());	
+	}
 
 	/**
 	enum_field_def
@@ -205,33 +233,43 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 	 */
 	@Override public void enterEnum_field_def(JSpecParser.Enum_field_defContext ctx) { 
 		activeRules.add(ctx.getRuleIndex());   
-		// create an enum component and set as activeEnumDef
-		createEnumComponent(ctx); 
 		// extract field header info indices
 		boolean hasNoId = ctx.getChild(1).getText().startsWith("[");
 		Integer idIdx = hasNoId ? null : 1;   
 		Integer arrayIdx = hasNoId ? 1 : 2;   
 		boolean hasName = (ctx.getChildCount() > arrayIdx + 2) && ctx.getChild(arrayIdx+1).getText().startsWith("\"");
 		Integer nameIdx = hasName ? arrayIdx+1 : null;   
-		// create the field component (and instance if not typedef) 
-		enterComponentDefinition(ctx, "field", idIdx, nameIdx);
 		// extract the field width and store in component
 		String fieldWidthStr = ctx.getChild(arrayIdx).getChild(1).getText();
 		RegNumber fieldWidth = resolveNumExpresion(fieldWidthStr);
-		if (fieldWidth == null)  MsgUtils.errorExit("Width of field " + activeCompDefs.peek().getId() +
-				" (value=" + fieldWidthStr + ") in " + activeCompDefs.peek().getParent().getId() + " could not be resolved.");
-		activeCompDefs.peek().setProperty("fieldwidth", 
-				fieldWidth.toFormat(RegNumber.NumBase.Dec, RegNumber.NumFormat.Int), 0);  // save width to component (also used to indicate field comp)
-		if (!hasNoId) activeCompDefs.peek().setProperty("encode", ctx.getChild(1).getText(), 0);  // indicate field has enum encoding
-		// if a new field instance was created, update it's field indices (relative - final vals resolved at builder)
-		if (!typeDefActiveStates.peek()) updateFieldIndexInfo(fieldWidth.toInteger(), true);  
+		// if just a constant define, add the field width
+		boolean constantDefineActive = activeRules.contains(JSpecParser.RULE_num_constant_def);
+		if (constantDefineActive) {
+			if (fieldWidth == null)  MsgUtils.warnMessage("Width of integer constant " + activeConstantId + " could not be resolved");
+			else accumulated_constant_width += fieldWidth.toInteger();
+		}
+		else {
+			if (fieldWidth == null) MsgUtils.errorExit("Width of field " + activeCompDefs.peek().getId() +
+			" (value=" + fieldWidthStr + ") in " + activeCompDefs.peek().getParent().getId() + " could not be resolved.");
+			// create an enum component and set as activeEnumDef
+			createEnumComponent(ctx); 			// create the field component (and instance if not typedef) 
+			enterComponentDefinition(ctx, "field", idIdx, nameIdx);
+			activeCompDefs.peek().setProperty("fieldwidth", 
+					fieldWidth.toFormat(RegNumber.NumBase.Dec, RegNumber.NumFormat.Int), 0);  // save width to component (also used to indicate field comp)
+			if (!hasNoId) activeCompDefs.peek().setProperty("encode", ctx.getChild(1).getText(), 0);  // indicate field has enum encoding
+			// if a new field instance was created, update it's field indices (relative - final vals resolved at builder)
+			if (!typeDefActiveStates.peek()) updateFieldIndexInfo(fieldWidth.toInteger(), true);  
+		}
 	}
 
 	/**
 	 */
 	@Override public void exitEnum_field_def(JSpecParser.Enum_field_defContext ctx) { 
 		activeRules.remove(ctx.getRuleIndex());
-		exitComponentDefinition();		
+		boolean constantDefineActive = activeRules.contains(JSpecParser.RULE_num_constant_def);
+		if (!constantDefineActive) {
+			exitComponentDefinition();
+		}		
 	}
 
 
@@ -327,25 +365,37 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 		Integer idIdx = hasNoId ? null : 1;   
 		Integer arrayIdx = hasNoId ? 1 : 2;   
 		boolean hasName = (ctx.getChildCount() > arrayIdx + 2) && ctx.getChild(arrayIdx+1).getText().startsWith("\"");
-		Integer nameIdx = hasName ? arrayIdx+1 : null;   
-		// create the component (and instance if not typedef) 
-		enterComponentDefinition(ctx, "field", idIdx, nameIdx);		
+		Integer nameIdx = hasName ? arrayIdx+1 : null;
 		// extract the field width and store in component
 		String fieldWidthStr = ctx.getChild(arrayIdx).getChild(1).getText();
 		RegNumber fieldWidth = resolveNumExpresion(fieldWidthStr);
-		if (fieldWidth == null)  MsgUtils.errorExit("Width of field " + activeCompDefs.peek().getId() +
-				" (value=" + fieldWidthStr + ") in " + activeCompDefs.peek().getParent().getId() + " could not be resolved.");
-		activeCompDefs.peek().setProperty("fieldwidth", 
-				fieldWidth.toFormat(RegNumber.NumBase.Dec, RegNumber.NumFormat.Int), 0);  // save width to component  (also used to indicate field comp)
-		// if a new field instance was created, update it's field indices (relative - finel vals resolved at builder)
-		if (!typeDefActiveStates.peek()) updateFieldIndexInfo(fieldWidth.toInteger(), true);
+		// if just a constant define, add the field width
+		boolean constantDefineActive = activeRules.contains(JSpecParser.RULE_num_constant_def);
+		if (constantDefineActive) {
+			if (fieldWidth == null)  MsgUtils.warnMessage("Width of enum constant " + activeConstantId + " could not be resolved");
+			else accumulated_constant_width += fieldWidth.toInteger();
+		}
+		else {
+			if (fieldWidth == null)  MsgUtils.errorExit("Width of field " + activeCompDefs.peek().getId() +
+			" (value=" + fieldWidthStr + ") in " + activeCompDefs.peek().getParent().getId() + " could not be resolved.");
+			// create the component (and instance if not typedef) 
+			enterComponentDefinition(ctx, "field", idIdx, nameIdx);	
+			activeCompDefs.peek().setProperty("fieldwidth", 
+			fieldWidth.toFormat(RegNumber.NumBase.Dec, RegNumber.NumFormat.Int), 0);  // save width to component  (also used to indicate field comp)
+			// if a new field instance was created, update it's field indices (relative - final vals resolved at builder)
+			// TODO - increment aggregate width here if in constant define
+			if (!typeDefActiveStates.peek()) updateFieldIndexInfo(fieldWidth.toInteger(), true);
+		}		
 	}
 	
 	/**
 	 */
 	@Override public void exitInt_field_def(JSpecParser.Int_field_defContext ctx) { 
 		activeRules.remove(ctx.getRuleIndex());
-		exitComponentDefinition();		
+		boolean constantDefineActive = activeRules.contains(JSpecParser.RULE_num_constant_def);
+		if (!constantDefineActive) {
+			exitComponentDefinition();
+		}
 	}
 	
 	/**
@@ -377,20 +427,20 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
       : 'constant' id str         
         LBRACE
         ( integer_constant_assign   //  int constant value assign
-        | width_constant_assign+  // enum or field constant used for WIDTH()
+        | width_constant_assign+  // aggregate struct of int, enum or field constant only used for WIDTH() calculation currently / int_field_def
         )   
         RBRACE
         SEMI 
 	 */
 	@Override public void enterNum_constant_def(JSpecParser.Num_constant_defContext ctx) {
 		activeRules.add(ctx.getRuleIndex());
-		accumulated_constant_width = 0;  // init constant width
+		accumulated_constant_width = 0;  // init constant width for composite constant
 		activeConstantId = ctx.getChild(1).getText();  // set active constant id 
     }
 	
 	@Override public void exitNum_constant_def(JSpecParser.Num_constant_defContext ctx) {  
 		activeRules.remove(ctx.getRuleIndex());
-		
+
 		ParseTree constAssignStmt = ctx.getChild(4);
 		boolean isIntConstant = (constAssignStmt.getChildCount() > 2) && "integer".equals(constAssignStmt.getChild(0).getText()) && "=".equals(constAssignStmt.getChild(2).getText());
     	//if (!isIntConstant) System.out.println("JSpecModelExtractor exitNum_constant_def: stmt=" + constAssignStmt.getText());
@@ -406,7 +456,7 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
         	}
         	else MsgUtils.warnMessage("Value of integer constant " + activeConstantId + " could not be resolved");
         }
-		// otherwise save accumulated_constant_width
+		// otherwise a composite constant so save accumulated_constant_width
         else if (accumulated_constant_width > 0) {
         		numConstants.put(activeConstantId, new RegNumber(0));  // constant value defualt is zero
         		numConstants.get(activeConstantId).setVectorLen(accumulated_constant_width);
@@ -434,53 +484,6 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 		activeRules.remove(ctx.getRuleIndex());
 	}
 	
-	/**
-     width_constant_assign
-     : ( 'enum' array LBRACE ~(LBRACE|RBRACE)* RBRACE SEMI 
-     | 'integer' id array  str SEMI
-     |  id SEMI    // field or fieldset id
-     )
-	 */
-	@Override public void enterWidth_constant_assign(JSpecParser.Width_constant_assignContext ctx) {
-		activeRules.add(ctx.getRuleIndex());		
-	}
-
-	@Override public void exitWidth_constant_assign(JSpecParser.Width_constant_assignContext ctx) {
-		activeRules.remove(ctx.getRuleIndex());
-		
-		boolean isIntConstant = (ctx.getChildCount() > 2) && "integer".equals(ctx.getChild(0).getText());
-		boolean isEnumConstant = (ctx.getChildCount() > 2) && "enum".equals(ctx.getChild(0).getText());
-		boolean isFieldConstant = (ctx.getChildCount() > 1) && !isIntConstant && !isEnumConstant;
-    	//if (isEnumConstant) System.out.println("JSpecModelExtractor exitWidth_constant_assign: not int or fld, stmt=" + ctx.getText());
-		// if this is a constant representing a field or fieldset for width resolution, bump constant width 
-        if (isFieldConstant) {
-        	String fldId = ctx.getChild(0).getText();
-        	//System.out.println("JSpecModelExtractor exitWidth_constant_assign: field width assign detected, id=" + constId + ", fldid=" + fldId);
-        	Integer fldWidth = findFieldWidth(fldId);
-        	if (fldWidth != null) {
-        		accumulated_constant_width += fldWidth;
-   				//System.out.println("JSpecModelExtractor exitWidth_constant_assign: setting width of " + activeConstantId +  " to " + accumulated_constant_width);
-        	}
-        	else MsgUtils.warnMessage("Width of field/fieldset " + fldId + " in constant " + activeConstantId + " could not be resolved"); 
-        }       
-		// otherwise if an integer assign then set value and resolve width
-        else if (isIntConstant) {
-        		if (lastResolvedArrayIndex != null) {
-            		accumulated_constant_width += lastResolvedArrayIndex;
-        			//System.out.println("JSpecModelExtractor: exitWidth_constant_assign, setting width of " + activeConstantId +  " to " + accumulated_constant_width);
-        		}
-        		else MsgUtils.warnMessage("Width of integer constant " + activeConstantId + " could not be resolved");
-        }
-		// otherwise if an enum constant then set value to zero and resolve width
-        else if (isEnumConstant) {
-        		if (lastResolvedArrayIndex != null) {
-            		accumulated_constant_width += lastResolvedArrayIndex;
-        			//System.out.println("JSpecModelExtractor: exitWidth_constant_assign, setting width of " + activeConstantId +  " to " + accumulated_constant_width);
-        		}
-        		else MsgUtils.warnMessage("Width of enum constant " + activeConstantId + " could not be resolved");
-        }	
-	}
-
     /** returns an Integer representing the width of a field or fieldset having specified id.
      * Used for WIDTH() function resolution - in js, width property is always stored back into component
      *  If no field is found, null is returned

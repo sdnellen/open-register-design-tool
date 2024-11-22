@@ -39,7 +39,7 @@ num_constant_def
    : 'constant' id str         
      LBRACE
      (  integer_constant_assign   //  int constant value assign
-      | width_constant_assign+  // enum or field constant used for WIDTH()
+      | (enum_field_def | int_field_def| constant_field_instance | constant_field_set_def)+  // aggregated constant elements used for WIDTH() store (no actual constant value)
      )   
      RBRACE
      SEMI 
@@ -51,13 +51,20 @@ integer_constant_assign
      SEMI 
    ;
    
-/* enum [4] { assigns }; -or- integer el_bit[1]  "Excess low Bit"; -or- field_fieldset_id */
-width_constant_assign
-   : ( 'enum' array LBRACE ~(LBRACE|RBRACE)* RBRACE SEMI 
-     | 'integer' id array  str SEMI
-     |  id id? str? SEMI    // field or fieldset id
-     )
-   ;
+ /* simplified typedef instance in a defined composite constant */   
+constant_field_instance
+   : id id? (str | jstr)?
+     SEMI
+  ;
+
+/*  simplified field_set inline define in a constant */
+constant_field_set_def
+   : 'field_set' id (str | jstr)
+     LBRACE
+     (int_field_def | enum_field_def)+
+     RBRACE         
+     SEMI 
+   ;    
       
 /* constant EA_FO_DATAPATH_WIDTH "Datapath width" {...}; (unsupported constants to be ignored) */  
 string_constant_def
