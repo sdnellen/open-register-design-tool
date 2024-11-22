@@ -277,12 +277,12 @@ public class RdlBuilder extends OutputBuilder {
 		// get enum name/description text
 		String enumId = enumComp.getId();
         // gen enum header
-		outputList.add(new OutputLine(indentLvl++, "enum " + enumId + " {"));
+		outputList.add(new OutputLine(indentLvl++, "enum " + escapedId(enumId) + " {"));
 		// add enum elements
 		for (ModEnumElement enumElem : enumComp.getEnumElements()) {
 			enumElem.getValue().setNumFormat(RegNumber.NumFormat.Address);
 			String enumNameStr = (enumElem.getName() == null) ? "" : " { name = \"" + enumElem.getName() + "\";}";
-			outputList.add(new OutputLine(indentLvl, enumElem.getId() + " = " + enumElem.getValue() + enumNameStr + ";"));
+			outputList.add(new OutputLine(indentLvl, escapedId(enumElem.getId()) + " = " + enumElem.getValue() + enumNameStr + ";"));
 		}
 		outputList.add(new OutputLine(--indentLvl, "};"));  // finish up enum def
 		outputList.add(new OutputLine(indentLvl, ""));	
@@ -357,7 +357,7 @@ public class RdlBuilder extends OutputBuilder {
 	        outputList.add(new OutputLine(indentLvl, "sub_category = \"" + field.getSubCategory() + "\";")); 
 		// if field has enum encoding provide a ref
 		if (field.getEncoding() != null)
-			outputList.add(new OutputLine(indentLvl, "encode = " + field.getEncoding().getId() + ";"));
+			outputList.add(new OutputLine(indentLvl, "encode = " + escapedId(field.getEncoding().getId()) + ";"));
 	}
 
     /** create set of id keywords that need to be escaped */
@@ -379,6 +379,19 @@ public class RdlBuilder extends OutputBuilder {
     	escapedIds.add("type");
     	escapedIds.add("underflow");
     	escapedIds.add("threshold");
+		escapedIds.add("reg");
+		escapedIds.add("regfile");
+		escapedIds.add("halt");
+		escapedIds.add("saturate");
+		escapedIds.add("sync");
+		escapedIds.add("ref");
+		escapedIds.add("all");
+
+		escapedIds.add("rw");
+		escapedIds.add("wr");
+		escapedIds.add("debug_mode");
+		escapedIds.add("SRAM");
+		escapedIds.add("DEFAULT");
 	}
     
     //---------------------------- output write methods ----------------------------------------
