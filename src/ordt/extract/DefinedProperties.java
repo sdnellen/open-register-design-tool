@@ -125,6 +125,11 @@ public class DefinedProperties {
 		addProperty(newList, "satoutput", DefinedPropertyType.BOOLEAN, "false", DefinedProperty.FIELD, false, false, false);
 		addProperty(newList, "sub_category", DefinedPropertyType.BOOLEAN, "false", DefinedProperty.FIELD, false, false, false);
 		addProperty(newList, "rtl_coverage", DefinedPropertyType.BOOLEAN, "false", DefinedProperty.FIELD, false, false, false);
+		//addProperty(newList, "js_recovery_action", DefinedPropertyType.STRING, "", DefinedProperty.FIELD, false, false, true); // js passthru
+		//addProperty(newList, "js_impact", DefinedPropertyType.STRING, "", DefinedProperty.FIELD, false, false, true); // js passthru
+		//addProperty(newList, "js_immediate_action", DefinedPropertyType.STRING, "", DefinedProperty.FIELD, false, false, true); // js passthru
+		//addProperty(newList, "js_fault_source", DefinedPropertyType.STRING, "", DefinedProperty.FIELD, false, false, true); // js passthru
+		//addProperty(newList, "js_root_cause", DefinedPropertyType.STRING, "", DefinedProperty.FIELD, false, false, true); // js passthru
 		
 		// override allowed property set if input type is jspec
 		if (Ordt.hasInputType(Ordt.InputType.JSPEC)) {
@@ -258,7 +263,7 @@ public class DefinedProperties {
 		DefinedPropertyType type = DefinedProperty.getTypeEncoding(name, typeStr);
 		boolean isJs = name.startsWith("js_");  // user properties starting with js prefix are considered passthru
 		addProperty(propertySet, name, type, defaultValue, usage, false, true, isJs);
-		//System.out.println("DefinedProperties addUserProperty: name=" + name + ", type=" + type + ", default=" + defaultValue + ", usage=" + usage);
+		//System.out.println("DefinedProperties addUserProperty: name=" + name + ", type=" + type + ", defaultValue=" + defaultValue + ", usage=" + usage + ", jsPassthru=" + isJs);
 	}
 
 	/** return the list of user-defined properties */

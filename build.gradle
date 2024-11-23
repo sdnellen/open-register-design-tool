@@ -32,9 +32,10 @@ configurations {
     }
 }
 
+// 4.6 showed parse listener order deltas (eg user propertys), so backed to 4.5
 dependencies {
-    antlr  group: "org.antlr", name: "antlr4", version: "4.6"
-    compile group: "org.antlr", name: "antlr4-runtime", version: "4.6"
+    antlr  group: "org.antlr", name: "antlr4", version: "4.5"
+    compile group: "org.antlr", name: "antlr4-runtime", version: "4.5"
 }
 
 // make to resulting jar java 8 compatible for now

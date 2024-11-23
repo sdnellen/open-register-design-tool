@@ -50,11 +50,11 @@ import CommonExtParms;
 
   public static void addUserProperty(String prop) {
     userDefinedProperties.add(prop);
-    //System.out.println("adding user property " + prop + " to set");
+    //System.out.println("SystemRDL.g4: adding user property " + prop + " to set");
   }
 
   public static boolean isUserProperty(String prop) {
-    //System.out.println("user property " + prop + " is found=" + userDefinedProperties.contains(prop));
+    //System.out.println("SystemRDL.g4: user property " + prop + " is found=" + userDefinedProperties.contains(prop));
     return userDefinedProperties.contains(prop);
   }
 
@@ -261,7 +261,6 @@ default_property_assign
 explicit_property_assign
   : property_modifier
     property
-
   | property
     ( EQ property_assign_rhs )?   // added ? here to allow properties w/o an EQ (=true)
   ;
