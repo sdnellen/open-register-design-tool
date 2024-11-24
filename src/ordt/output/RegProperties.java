@@ -387,7 +387,8 @@ public class RegProperties extends AddressableInstanceProperties {
 		fieldSetOffset = (fsOffset==null)? highAvailableIdx : parentFsOffset + fsOffset;  // TODO null offset is correct only if packing from low to high since highAvailableIdx is absolute
 		if (fieldSetOffset<parentFsOffset) MsgUtils.errorExit("Unable to fit fieldset " + fieldSetProperties.getId() + " in register " + getInstancePath());
         // set the min allowed register offset including any padding
-		Integer bitPaddingOffset = getRegWidth() - ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
+		Integer assignedBits = ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
+		Integer bitPaddingOffset = (assignedBits > 0)? getRegWidth() - assignedBits : 0;  // compute padding offset
 		int newMinValidOffset = bitPaddingOffset + fieldSetOffset;
 		if (newMinValidOffset>minValidOffset) minValidOffset = newMinValidOffset; // only update if offset increases
 		//System.out.println("RegProperties addFieldSet: outgoing state (highAvailableIdx=" + highAvailableIdx + ",fieldSetOffset=" + fieldSetOffset + ", minValidOffset=" + minValidOffset + ")");
@@ -404,7 +405,8 @@ public class RegProperties extends AddressableInstanceProperties {
 		// adjust current offset
 		fieldSetOffset = (newOffset==null)? highAvailableIdx : newOffset;  // TODO null offset is correct only if packing from low to high since highAvailableIdx is absolute
         // set the min allowed register offset including any padding
-		Integer bitPaddingOffset = getRegWidth() - ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
+		Integer assignedBits = ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
+		Integer bitPaddingOffset = (assignedBits > 0)? getRegWidth() - assignedBits : 0;  // compute padding offset
 		if (minOffset!=null) minValidOffset = bitPaddingOffset + minOffset; 
 		// adjust highAvailableIdx if below minValidOffset
 		if (highAvailableIdx < minValidOffset) highAvailableIdx = minValidOffset;
@@ -422,8 +424,9 @@ public class RegProperties extends AddressableInstanceProperties {
 		// compute field indices within register
 		Integer width = fieldProperties.getFieldWidth(); 
 		Integer offset = fieldProperties.getExtractInstance().getOffset();  // get the relative offset of this field
-		Integer bitPaddingOffset = getRegWidth() - ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
-		//if (getId().equals("int_status")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", offset=" + offset + ", width=" + width + ", fsetOffset=" + fieldSetOffset + ", bitPaddingOffset=" + bitPaddingOffset + ", regwidth=" + getRegWidth() + ", highAvailableIdx=" + highAvailableIdx);
+		Integer assignedBits = ((ModRegister) getExtractInstance().getRegComp()).getBitsAssigned();
+		Integer bitPaddingOffset = (assignedBits > 0)? getRegWidth() - assignedBits : 0;  // compute padding offset
+		//if (getId().equals("jtag_id")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", offset=" + offset + ", width=" + width + ", fsetOffset=" + fieldSetOffset + ", bitPaddingOffset=" + bitPaddingOffset + ", regwidth=" + getRegWidth() + ", highAvailableIdx=" + highAvailableIdx);
 		
 		// compute the actual field index  
 		Integer lowFieldIndex = 0;
@@ -437,7 +440,7 @@ public class RegProperties extends AddressableInstanceProperties {
 		if (lowFieldIndex == null) {
 			MsgUtils.errorExit("Unable to fit all fields in " + getRegWidth() + "b register instance " + getInstancePath());
 		}
-		//if (getId().equals("int_status")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", adding at reg lowFieldIndex=" + lowFieldIndex);
+		//if (getId().equals("jtag_id")) System.out.println("RegProperties addField: id=" + fieldProperties.getInstancePath() + ", adding at reg lowFieldIndex=" + lowFieldIndex);
 		fieldCount++;  // bump the field count
 		return lowFieldIndex;   
 	}
