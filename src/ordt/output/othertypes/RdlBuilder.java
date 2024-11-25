@@ -58,6 +58,12 @@ public class RdlBuilder extends OutputBuilder {
 	}
 
 	@Override
+	protected void addFieldSet() {
+		//  create enums defs for this fieldset with prefixed names
+		buildEnumDefs(fieldSetProperties.getExtractInstance().getRegComp(), fieldSetProperties.getFieldSetPrefixString());
+	}
+
+	@Override
 	public void addRegister() {
 	}
 
@@ -220,7 +226,7 @@ public class RdlBuilder extends OutputBuilder {
 		// add regwidth if not default
 		if (regProperties.getRegWidth() != ModRegister.defaultWidth)
 			outputList.add(new OutputLine(indentLvl, "regwidth = " + regProperties.getRegWidth() + ";"));
-		//  display enums defs in this reg
+		//  create enums defs in this reg
 		buildEnumDefs(regProperties.getExtractInstance().getRegComp());
 	}
 
@@ -258,30 +264,34 @@ public class RdlBuilder extends OutputBuilder {
 	/** build enum def rdl for all enum children in a component
 	 * 
 	 * @param modComp - component whose child enum defs will be generated
+	 * @param prefix - optional prefix of enum id
 	 */
-	private void buildEnumDefs(ModComponent modComp) { 
+	private void buildEnumDefs(ModComponent modComp, String prefix) { 
 		if (modComp == null) return;
 		List<ModEnum> enumList = modComp.getCompEnumList();
 		// display child enums
 		for (ModEnum modEnum: enumList) {
-			buildEnumDef(modEnum);
+			buildEnumDef(modEnum, prefix);
 		}			
+	}
+	private void buildEnumDefs(ModComponent modComp) { 
+		buildEnumDefs(modComp, "");
 	}
 	
 	/** build enum rdl statements
 	 * 
 	 * @param enumComp - enum component to be generated
 	 */
-	private void buildEnumDef(ModEnum enumComp) { 
+	private void buildEnumDef(ModEnum enumComp, String prefix) { 
 		if (enumComp == null) return;
 		// get enum name/description text
-		String enumId = enumComp.getId();
+		String enumId = prefix + enumComp.getId();
         // gen enum header
 		outputList.add(new OutputLine(indentLvl++, "enum " + escapedId(enumId) + " {"));
 		// add enum elements
 		for (ModEnumElement enumElem : enumComp.getEnumElements()) {
 			enumElem.getValue().setNumFormat(RegNumber.NumFormat.Address);
-			String enumNameStr = (enumElem.getName() == null) ? "" : " { name = \"" + enumElem.getName() + "\";}";
+			String enumNameStr = (enumElem.getName() == null) ? "" : " { name = \"" + enumElem.getName() + "\"; }";
 			outputList.add(new OutputLine(indentLvl, escapedId(enumElem.getId()) + " = " + enumElem.getValue() + enumNameStr + ";"));
 		}
 		outputList.add(new OutputLine(--indentLvl, "};"));  // finish up enum def
@@ -356,8 +366,11 @@ public class RdlBuilder extends OutputBuilder {
 		if (field.hasSubCategory())
 	        outputList.add(new OutputLine(indentLvl, "sub_category = \"" + field.getSubCategory() + "\";")); 
 		// if field has enum encoding provide a ref
-		if (field.getEncoding() != null)
-			outputList.add(new OutputLine(indentLvl, "encode = " + escapedId(field.getEncoding().getId()) + ";"));
+		if (field.getEncoding() != null) {
+			String enumName = field.getEncoding().getId();
+			if (enumName.equals(field.getId())) enumName = field.getPrefixedId(); // use prefixed id if same as field id (as would be the case for a js enum field)
+			outputList.add(new OutputLine(indentLvl, "encode = " + escapedId(enumName) + ";"));
+		}
 	}
 
     /** create set of id keywords that need to be escaped */

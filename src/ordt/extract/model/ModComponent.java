@@ -316,9 +316,15 @@ public abstract class ModComponent extends ModBaseComponent {
 	 */
 	public void addCompEnum(ModEnum regEnum) {
 		if (findLocalEnum(regEnum.getId()) != null) MsgUtils.errorMessage("Duplicate enum (" + regEnum.getId() + ") declared in component " + getId());
+		//System.out.println("ModComponent addCompEnum:  Adding enum (" + regEnum.getId() + ") to component " + getId());
 		enums.add(regEnum);		
 	}
 	
+	/** return true if this comp has enum defines */
+	public boolean hasEnums() {
+		return !enums.isEmpty();
+	}
+
 	/** get list of child enums for this comp
 	 */
 	public List<ModEnum> getCompEnumList() {

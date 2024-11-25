@@ -252,7 +252,8 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 			if (fieldWidth == null) MsgUtils.errorExit("Width of field " + activeCompDefs.peek().getId() +
 			" (value=" + fieldWidthStr + ") in " + activeCompDefs.peek().getParent().getId() + " could not be resolved.");
 			// create an enum component and set as activeEnumDef
-			createEnumComponent(ctx); 			// create the field component (and instance if not typedef) 
+			createEnumComponent(ctx);
+			// create the field component (and instance if not typedef) 
 			enterComponentDefinition(ctx, "field", idIdx, nameIdx);
 			activeCompDefs.peek().setProperty("fieldwidth", 
 					fieldWidth.toFormat(RegNumber.NumBase.Dec, RegNumber.NumFormat.Int), 0);  // save width to component (also used to indicate field comp)

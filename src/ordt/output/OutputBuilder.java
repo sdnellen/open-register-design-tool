@@ -217,7 +217,13 @@ public abstract class OutputBuilder implements OutputWriterIntf{
 			   fieldSetProperties.setOffset(newFsOffset);  // from actual reg add fs call so its always non-null
 			   
 			   fieldSetPropertyStack.push(fieldSetProperties);  // push active fieldset onto stack
-			   
+				// set fieldset prefix of fields in this fs instance
+				String prefix = getFieldSetPrefix(); // extract from fieldset instance values
+				//System.err.println("OutputBuilder: addFieldSet, setting prefix to  " + prefix);
+				//System.out.println("  fieldset path=" + fieldSetProperties.getInstancePath() + ", id=" + fieldSetProperties.getId());
+				//System.out.println("    reg path=" + regProperties.getInstancePath() + ", id=" + regProperties.getId());
+				fieldSetProperties.setFieldSetPrefixString(prefix);			   
+		
 			   // inhibit child builder field call if external and not visiting externals
 			   if (visitEachReg() || (regProperties.isFirstRep() && firstRegSetRep())) { // qualify add calls by valid register options	
 				   if (!regProperties.isExternal() || visitExternalRegisters()) 

@@ -3,7 +3,6 @@
  */
 package ordt.output;
 
-
 import ordt.extract.DefinedProperties;
 import ordt.extract.PropertyList;
 import ordt.extract.model.ModComponent;
@@ -14,6 +13,7 @@ import ordt.extract.model.ModInstance;
 public class FieldSetProperties extends InstanceProperties {
 	private Integer fieldSetWidth = 0;   // default to empty fieldset        
 	private Integer offset = null;   // no specific index set
+	private String fieldSetPrefixString = ""; // fieldset prefix string for fields/enums in this fieldset 
 
 	/** init properties using defaults -> component -> instance values */
 	public FieldSetProperties(ModInstance fieldSetInst) {	
@@ -31,6 +31,7 @@ public class FieldSetProperties extends InstanceProperties {
 		System.out.println("  FieldSetProperty info:" );  
 		System.out.println("   fieldset width=" + this.getFieldSetWidth());  		
 		System.out.println("   fieldset offset=" + this.getOffset());  		
+		System.out.println("   fieldset prefix=" + this.getFieldSetPrefixString());  		
 	}
 	
 	/** extract properties from the calling instance */
@@ -94,6 +95,61 @@ public class FieldSetProperties extends InstanceProperties {
 	 */
 	public void setOffset(Integer offset) {
 		this.offset = offset;
+	}
+
+	/** get fieldSetPrefixString
+	 *  @return the fieldSetPrefixString
+	 */
+	public String getFieldSetPrefixString() {
+		return fieldSetPrefixString;
+	}
+
+	/** set fieldSetPrefixString
+	 *  @param fieldSetPrefixString the fieldSetPrefixString to set
+	 */
+	public void setFieldSetPrefixString(String fieldSetPrefixString) {
+		this.fieldSetPrefixString = fieldSetPrefixString;
+	}
+
+
+	/** hashcode/equals overrides 
+	 * - ignores rhsReferences in compare
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((fieldSetWidth == null) ? 0 : fieldSetWidth.hashCode());
+		result = prime * result + ((offset == null) ? 0 : offset.hashCode());
+		result = prime * result + ((fieldSetPrefixString == null) ? 0 : fieldSetPrefixString.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		FieldSetProperties other = (FieldSetProperties) obj;
+		if (fieldSetWidth == null) {
+			if (other.fieldSetWidth != null)
+				return false;
+		} else if (!fieldSetWidth.equals(other.fieldSetWidth))
+			return false;
+		if (offset == null) {
+			if (other.offset != null)
+				return false;
+		} else if (!offset.equals(other.offset))
+			return false;
+		if (fieldSetPrefixString == null) {
+			if (other.fieldSetPrefixString != null)
+				return false;
+		} else if (!fieldSetPrefixString.equals(other.fieldSetPrefixString))
+			return false;
+		return true;
 	}
 
 
