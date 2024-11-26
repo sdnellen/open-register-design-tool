@@ -59,7 +59,7 @@ public class RdlBuilder extends OutputBuilder {
 
 	@Override
 	protected void addFieldSet() {
-		//  create enums defs for this fieldset with prefixed names
+		//  create enums defs for this fieldset with prefixed names  // FIXME - currently these are placed in regset rather than reg, so are not scoped correctly
 		buildEnumDefs(fieldSetProperties.getExtractInstance().getRegComp(), fieldSetProperties.getFieldSetPrefixString());
 	}
 

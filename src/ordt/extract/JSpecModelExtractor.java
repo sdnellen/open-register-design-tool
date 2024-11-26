@@ -321,12 +321,14 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 	@Override public void exitField_set_def(JSpecParser.Field_set_defContext ctx) { 
 		activeRules.remove(ctx.getRuleIndex());
 		Integer childOffset = fieldOffsets.pop(); // grab the width of this fieldset from child offset
+
 		// if this fieldset is a union, remove all except first child 
 		ModFieldSet currentFSet = (ModFieldSet) activeCompDefs.peek();
 		if (currentFSet.isUnion()) {
 			//System.out.println("JSpecModelExtractor exitFieldSet: union id=" + currentFSet.getId() + ", original offset=" + childOffset);
 			childOffset = currentFSet.cleanupUnion();
 			//System.out.println("JSpecModelExtractor exitFieldSet:     new offset=" + childOffset);
+			//if (childOffset == null) System.out.println("JSpecModelExtractor exitFieldSet: null childOffset after union cleanup in fset id=" + currentFSet.getId());
 		}
 		if (!typeDefActiveStates.peek()) {
 			updateFieldIndexInfo(childOffset, true);  // if an instance, update current offset

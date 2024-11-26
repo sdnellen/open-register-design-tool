@@ -60,13 +60,14 @@ public class ModFieldSet extends ModComponent {
 
 	/** remove all except first child instance and return size of first instance */  // TODO - js specific move into extractor
 	public Integer cleanupUnion() {
-		if (getChildInstances().size() > 1) {
+		Integer firstElemSize = null;
+		if (getChildInstances().size() > 1)
 			for (int idx=getChildInstances().size()-1; idx>0; idx--) getChildInstances().remove(idx);
-			ModComponent child = getChildInstances().get(0).getRegComp();
-			if (child.isField()) return child.getIntegerProperty("fieldwidth");
-			if (child.isFieldSet()) return child.getIntegerProperty("fieldstructwidth");
-		}
-		return this.getIntegerProperty("fieldstructwidth");
+		ModComponent child = getChildInstances().get(0).getRegComp();
+		if (child.isField()) firstElemSize = child.getIntegerProperty("fieldwidth");
+		else if (child.isFieldSet()) firstElemSize = child.getIntegerProperty("fieldstructwidth");
+		if (firstElemSize == null) System.out.println("ModFieldSet cleanupUnion: unable to determine size of first element in union fieldset " + this.getId() + ", child=" + child.getId() + ", isField=" + child.isField() + ", isFieldSet=" + child.isFieldSet());
+		return firstElemSize;
 	}
 
 	// ------------------------------------ code gen templates ----------------------------------------

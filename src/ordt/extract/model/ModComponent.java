@@ -285,8 +285,8 @@ public abstract class ModComponent extends ModBaseComponent {
 	 *  @param ModComponent to add as child
 	 */
 	public void addChildComponent(ModComponent regComp) {
-		if (findLocalCompDef(regComp.getId()) != null) MsgUtils.errorMessage("Duplicate component (" + regComp.getId() + ") declared in component " + getId());
-		childComponents.add(regComp);		
+		if (findLocalCompDef(regComp.getId()) != null) MsgUtils.errorMessage("Duplicate component (" + regComp.getId() + ") declared in component " + getId() + " will be ignored");
+		else childComponents.add(regComp);		
 	}
 	
 	/** get instancesOf
@@ -315,9 +315,9 @@ public abstract class ModComponent extends ModBaseComponent {
 	 *  @param regenum to add as child
 	 */
 	public void addCompEnum(ModEnum regEnum) {
-		if (findLocalEnum(regEnum.getId()) != null) MsgUtils.errorMessage("Duplicate enum (" + regEnum.getId() + ") declared in component " + getId());
 		//System.out.println("ModComponent addCompEnum:  Adding enum (" + regEnum.getId() + ") to component " + getId());
-		enums.add(regEnum);		
+		if (findLocalEnum(regEnum.getId()) != null) MsgUtils.errorMessage("Duplicate enum (" + regEnum.getId() + ") declared in component " + getId() + " will be ignored");
+		else enums.add(regEnum);		
 	}
 	
 	/** return true if this comp has enum defines */
