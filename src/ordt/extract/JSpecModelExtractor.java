@@ -370,6 +370,7 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 		boolean hasName = (ctx.getChildCount() > arrayIdx + 2) && ctx.getChild(arrayIdx+1).getText().startsWith("\"");
 		Integer nameIdx = hasName ? arrayIdx+1 : null;
 		// extract the field width and store in component
+		//System.out.println("JSpecModelExtractor enterInt_field_def: str=" + ctx.getText() );
 		String fieldWidthStr = ctx.getChild(arrayIdx).getChild(1).getText();
 		RegNumber fieldWidth = resolveNumExpresion(fieldWidthStr);
 		// if just a constant define, add the field width
