@@ -29,6 +29,7 @@ import ordt.parameters.ExtParameters;
 public class RdlBuilder extends OutputBuilder {
 	
 	private List<OutputLine> outputList = new ArrayList<OutputLine>();
+	private List<OutputLine> fieldSetEnumOutputList;
 	private static HashSet<String> escapedIds = new HashSet<String>(); // set of keywords needing to be escaped
 	private int indentLvl = 0;
 	
@@ -59,24 +60,27 @@ public class RdlBuilder extends OutputBuilder {
 
 	@Override
 	protected void addFieldSet() {
-		//  create enums defs for this fieldset with prefixed names  // FIXME - currently these are placed in regset rather than reg, so are not scoped correctly
-		buildEnumDefs(fieldSetProperties.getExtractInstance().getRegComp(), fieldSetProperties.getFieldSetPrefixString());
+		//  create enums defs for this fieldset with prefixed names  - store in fieldSetEnumOutputList foruse in finishRegister
+		buildEnumDefs(fieldSetProperties.getExtractInstance().getRegComp(), fieldSetProperties.getFieldSetPrefixString(), fieldSetEnumOutputList, 1);
 	}
 
 	@Override
-	public void addRegister() {
+	public void addRegister() {  // doreg processing in finishRegister using stored field and fieldset info
+		fieldSetEnumOutputList = new ArrayList<OutputLine>();
 	}
 
 	@Override
 	public void finishRegister() {
-		// only add the register if it is sw accessible
+		// only add the register if it is sw accessible (valid post field processing)
 		if (regProperties.isSwWriteable() || regProperties.isSwReadable()) {
 			//if (regProperties.isAlias()) System.out.println("RdlBuilder finishRegister: Id=" + regProperties.getId() + ", aliasedId=" + regProperties.getAliasedId());
 			// build the register header
 			String aliasComp = regProperties.isAlias()? regProperties.getId() + "_ALIAS" : "";
 			buildRegHeader(aliasComp);
+			// add any enums defined in fieldsets
+			outputList.addAll(fieldSetEnumOutputList);
 			// add field info
-			buildFields();  
+			buildFields();
 			// close out the register definition
 			// if not an alias, just generate the instance
 			if (!regProperties.isAlias()) outputList.add(new OutputLine(--indentLvl, "} " + getInstanceStr(regProperties) + ";"));
@@ -228,6 +232,7 @@ public class RdlBuilder extends OutputBuilder {
 			outputList.add(new OutputLine(indentLvl, "regwidth = " + regProperties.getRegWidth() + ";"));
 		//  create enums defs in this reg
 		buildEnumDefs(regProperties.getExtractInstance().getRegComp());
+
 	}
 
 	/** display name and description assigns
@@ -251,51 +256,50 @@ public class RdlBuilder extends OutputBuilder {
 		// add any jspec passthru attributes
 		buildJsPassthruAssigns(properties);
 	}
-
-	/** build jspec for current register fields */
-	private void buildFields() {  
-		// traverse field list from high bit to low
-		while (fieldList.size() > 0) {
-			FieldProperties field = fieldList.remove();  // get next field
-			buildField(field); 
-		}
-	}
 	
 	/** build enum def rdl for all enum children in a component
 	 * 
 	 * @param modComp - component whose child enum defs will be generated
 	 * @param prefix - optional prefix of enum id
+	 * @param outputList - optional list where output lines will be added
+	 * @param indentLvlAdjust - adjustment to indent level for output lines
 	 */
-	private void buildEnumDefs(ModComponent modComp, String prefix) { 
+	private void buildEnumDefs(ModComponent modComp, String prefix, List<OutputLine> outputLineList, int indentLvlAdjust) { 
 		if (modComp == null) return;
 		List<ModEnum> enumList = modComp.getCompEnumList();
 		// display child enums
 		for (ModEnum modEnum: enumList) {
-			buildEnumDef(modEnum, prefix);
+			buildEnumDef(modEnum, prefix, outputLineList, indentLvlAdjust);
 		}			
 	}
 	private void buildEnumDefs(ModComponent modComp) { 
-		buildEnumDefs(modComp, "");
+		buildEnumDefs(modComp, "" , outputList, 0);
 	}
 	
 	/** build enum rdl statements
 	 * 
 	 * @param enumComp - enum component to be generated
+	 * @param prefix - prefix of enum id
+	 * @param outputList - list where output lines will be added
+	 * @param indentLvlAdjust - adjustment to indent level for output lines
 	 */
-	private void buildEnumDef(ModEnum enumComp, String prefix) { 
+	private void buildEnumDef(ModEnum enumComp, String prefix, List<OutputLine> outputLineList, int indentLvlAdjust) { 
 		if (enumComp == null) return;
 		// get enum name/description text
 		String enumId = prefix + enumComp.getId();
         // gen enum header
-		outputList.add(new OutputLine(indentLvl++, "enum " + escapedId(enumId) + " {"));
+		indentLvl += indentLvlAdjust;
+		outputLineList.add(new OutputLine(indentLvl++, "enum " + escapedId(enumId) + " {"));
 		// add enum elements
 		for (ModEnumElement enumElem : enumComp.getEnumElements()) {
 			enumElem.getValue().setNumFormat(RegNumber.NumFormat.Address);
 			String enumNameStr = (enumElem.getName() == null) ? "" : " { name = \"" + enumElem.getName() + "\"; }";
-			outputList.add(new OutputLine(indentLvl, escapedId(enumElem.getId()) + " = " + enumElem.getValue() + enumNameStr + ";"));
+			outputLineList.add(new OutputLine(indentLvl, escapedId(enumElem.getId()) + " = " + enumElem.getValue() + enumNameStr + ";"));
 		}
-		outputList.add(new OutputLine(--indentLvl, "};"));  // finish up enum def
-		outputList.add(new OutputLine(indentLvl, ""));	
+		outputLineList.add(new OutputLine(--indentLvl, "};"));  // finish up enum def
+		outputLineList.add(new OutputLine(indentLvl, ""));	
+		indentLvl -= indentLvlAdjust;
+
 	}
 	
 	/** build any user property definitions */
@@ -317,6 +321,15 @@ public class RdlBuilder extends OutputBuilder {
 			String value = (pList.getProperty(name) == null)? "" : pList.getProperty(name);
 			DefinedProperty prop = DefinedProperties.getProperty(name);
 			if (prop!=null) outputList.add(new OutputLine(indentLvl, name + " = " + prop.getRdlValue(value) + ";")); 		
+		}
+	}
+
+	/** build jspec for current register fields */
+	private void buildFields() {  
+		// traverse field list from high bit to low
+		while (fieldList.size() > 0) {
+			FieldProperties field = fieldList.remove();  // get next field
+			buildField(field); 
 		}
 	}
 
