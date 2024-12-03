@@ -54,7 +54,7 @@ public class WrapperRemapSyncStagesXform extends WrapperRemapXform {
 		outList.add("  always @ (*)");
 		outList.add("    dly[0] = in_sig;");
 		outList.add("  always @ (posedge clk) begin");
-		outList.add("    for (idx = 1; idx <= STAGES; idx++)");
+		outList.add("    for (idx = 1; idx <= STAGES; idx=idx+1)");
 		outList.add("        dly[idx] <= " + ExtParameters.sysVerSequentialAssignDelayString() + "dly[idx-1];");
 		outList.add("  end");
 		outList.add("  assign out_sig = dly[STAGES];");
