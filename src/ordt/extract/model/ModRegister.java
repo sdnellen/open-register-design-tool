@@ -173,7 +173,7 @@ public class ModRegister extends ModComponent  {
 		// otherwise loop through each instance
 		else {
 			// check for invalid internal reps
-			if ((repCount > ExtParameters.sysVerMaxInternalRegReps()) && !regProperties.isExternal()) MsgUtils.warnMessage("Register replication exceeded max for internal register, instance=" + callingInst.getId() + ", reps=" + repCount);
+			if (outputBuilder.visitEachReg() && (repCount > ExtParameters.sysVerMaxInternalRegReps()) && !regProperties.isExternal()) MsgUtils.warnMessage("Register replication exceeded max for internal register, instance=" + callingInst.getId() + ", reps=" + repCount);
 			//else MsgUtils.infoMessage("generateVerilog: register replication for internal register, instance=" + callingInst.getId() + ", reps=" + repCount);
 				
 			// call once per replicated register

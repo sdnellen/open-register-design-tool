@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Stack;
 
 import ordt.extract.model.ModAddressableInstance;
+import ordt.extract.model.ModBaseComponent;
 import ordt.extract.model.ModComponent;
 import ordt.extract.model.ModEnum;
 import ordt.extract.model.ModEnumElement;
@@ -67,7 +68,8 @@ public class RdlModelExtractor extends SystemRDLBaseListener implements RegModel
 	 * */
 	public RdlModelExtractor (String rdlFile) {
         this.rdlInputFile = rdlFile;  // save rdl file
-       
+       	ModBaseComponent.setFieldOffsetsFromZero(true);  // rdl will pack from zero
+
         try {
         	InputStream is = System.in;
         	if ( rdlFile!=null ) is = new FileInputStream(rdlInputFile);

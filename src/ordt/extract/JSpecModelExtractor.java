@@ -51,7 +51,6 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 	private ModEnum activeEnumDef;   // active enum definition
 	private String jspecInputFile;                 // input jspec file name used for model extract 
 		
-	//private static int anonCompId = 0;   // id for anonymous components
 	private static int numExpessionDepth = 0;  // nest level of num_expressions
 	private HashMap<String, RegNumber> numConstants = new HashMap<String, RegNumber>();  // defined numeric constants
 	private RegNumber lastResolvedNum;  // value of last resolved integer num_expression
@@ -59,7 +58,7 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 	boolean inhibitNextResolveCheck = false;
 	
 	private Stack<Integer> fieldOffsets = new Stack<Integer>(); // stack of offsets used to calculate fieldset widths
-	private static int anonCompId = 0;
+	private static int anonCompId = 0;  // id for anonymous components
 	private static HashSet<String> ignoredParameters = getIgnoredParameters();  // list of ignored jspec params
 	
 	private Integer accumulated_constant_width;
@@ -70,7 +69,8 @@ public class JSpecModelExtractor extends JSpecBaseListener implements RegModelIn
 	 * @param moduleName to be used as default name for addrmap instances
 	 * */
 	public JSpecModelExtractor (String rdlFile) {
-        this.jspecInputFile = rdlFile;  // save rdl file
+        this.jspecInputFile = rdlFile;  // save input file
+		ModBaseComponent.setFieldOffsetsFromZero(false);  // jspec will pack from high bit
 
         try {
         	InputStream is = System.in;

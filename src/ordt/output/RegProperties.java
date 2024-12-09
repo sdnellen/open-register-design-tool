@@ -8,6 +8,7 @@ import ordt.output.common.MsgUtils;
 import ordt.extract.DefinedProperties;
 import ordt.extract.PropertyList;
 import ordt.extract.RegNumber;
+import ordt.extract.model.ModBaseComponent;
 import ordt.extract.model.ModComponent;
 import ordt.extract.model.ModInstance;
 import ordt.extract.model.ModRegister;
@@ -26,7 +27,6 @@ public class RegProperties extends AddressableInstanceProperties {
 	private int highAvailableIdx = 0;  // high available index with an assigned location blow
 	private Integer fieldSetOffset = 0;  // current accumulated field offset used to compute new index
 	private Integer minValidOffset = 0;  // min valid offset for field packing
-	private boolean fieldOffsetsFromZero;  // field offset direction for this reg
 	private int fieldHash = 0; // hash of this regs fields
 	
 	private String aliasedId = "";   // if this reg instance is an alias, store base instance
@@ -50,7 +50,6 @@ public class RegProperties extends AddressableInstanceProperties {
 	/** init properties using defaults -> component -> instance values */
 	public RegProperties(ModInstance regInst, boolean fieldOffsetsFromZero) {
 		super(regInst);  // init instance, id, external
-		this.fieldOffsetsFromZero = fieldOffsetsFromZero;
 	}
 
 	@Override
@@ -451,7 +450,7 @@ public class RegProperties extends AddressableInstanceProperties {
 	 * @return specified index of field or null if no suitable index found */
 	private Integer addFixedField(Integer offset, Integer width) {
 		// convert specified offset to an index value depending on direction
-		Integer lowIndex = fieldOffsetsFromZero ? offset : getRegWidth() - offset - width; 
+		Integer lowIndex = ModBaseComponent.getFieldOffsetsFromZero() ? offset : getRegWidth() - offset - width; 
 		if (lowIndex+width > highAvailableIdx) highAvailableIdx=lowIndex+width;  // save new high bit
 		//if (getId().equals("scfg_data")) System.out.println("RegProperties addFixedField: id=" + getId() + ", rwidth=" + getRegWidth() + ", offset=" + offset + ", width=" + width + ", computed lowIndex=" + lowIndex);
 		// find next index that could fit this field
@@ -526,7 +525,6 @@ public class RegProperties extends AddressableInstanceProperties {
 		result = prime * result + ((aliasedId == null) ? 0 : aliasedId.hashCode());
 		result = prime * result + ((category == null) ? 0 : category.hashCode());
 		result = prime * result + ((fieldCount == null) ? 0 : fieldCount.hashCode());
-		result = prime * result + (fieldOffsetsFromZero ? 1231 : 1237);
 		result = prime * result + (hasHaltOutputDefined ? 1231 : 1237);
 		result = prime * result + (hasInterruptFields ? 1231 : 1237);
 		result = prime * result + (hasInterruptOutputDefined ? 1231 : 1237);
@@ -574,8 +572,6 @@ public class RegProperties extends AddressableInstanceProperties {
 			if (other.fieldCount != null)
 				return false;
 		} else if (!fieldCount.equals(other.fieldCount))
-			return false;
-		if (fieldOffsetsFromZero != other.fieldOffsetsFromZero)
 			return false;
 		if (hasHaltOutputDefined != other.hasHaltOutputDefined)
 			return false;

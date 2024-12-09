@@ -14,10 +14,12 @@ public abstract class ModBaseComponent {
 
 	protected String id = "";   // id (type) of component
 	protected ModComponent parent;   // parent component of this entity
-	protected Integer inputLineNumber;  // line number in rdl file where component is defined
+	protected Integer inputLineNumber;  // line number in input file where component is defined
 	
 	protected PropertyList properties;   // properties defined for this component    
 	protected PropertyList defaultProperties;   // default properties defined in this component
+
+	private static boolean fieldOffsetsFromZero = true;  // flag to indicate field offsets stored in model are from zero (default) or from high bit of reg/fieldset
 
 	protected ModBaseComponent() {
 		id = "";
@@ -69,6 +71,16 @@ public abstract class ModBaseComponent {
 	 */
 	public String getInputLineString(String prefix, String suffix) {
 		return (inputLineNumber == null) ? "" : prefix + inputLineNumber + suffix;
+	}
+	
+	/** field offset direction getter */
+	public static boolean getFieldOffsetsFromZero() {
+		return fieldOffsetsFromZero;
+	}
+
+	/** field offset direction setter */
+	public static void setFieldOffsetsFromZero(boolean fieldOffsetsFromZero) {
+		ModBaseComponent.fieldOffsetsFromZero = fieldOffsetsFromZero;
 	}
 	
 	// ------ property methods 
