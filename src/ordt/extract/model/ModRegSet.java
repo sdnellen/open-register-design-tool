@@ -194,7 +194,7 @@ public class ModRegSet extends ModComponent {
 					if (regSetProperties.isRootExternal() || (ExtParameters.sysVerGenerateChildAddrmaps() && isAddressMap())) { 
 						//if (isAddressMap()) System.out.println("ModRegSet: adding addrmap, id=" + regSetProperties.getId() + ", root ext=" + regSetProperties.isRootExternal());  
 						// create empty regProperties so external set can be created
-						RegProperties regProperties = new RegProperties(callingInst, outputBuilder.fieldOffsetsFromZero());  // FIXME - dont need to use reg any more??
+						RegProperties regProperties = new RegProperties(callingInst);  // FIXME - dont need to use reg any more??
 						if (isAddressMap()) regProperties.setAddressMap(true);  // set address map indicator
 						if (!regProperties.isExternal()) regProperties.setExternalType(regSetProperties.getExternalType()); // pick up ext type if instance didnt carry it
 						regProperties.setRegWidth(regSetProperties.getMaxRegWidth());  // use max width for this addrmap 

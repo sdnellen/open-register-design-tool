@@ -140,7 +140,7 @@ public class ModRegister extends ModComponent  {
 		int repCount = callingInst.getRepCount(); // get non-null repCount 	
 		//System.out.println("ModRegister generateOutput: id=" + callingInst.getId() + ", reps=" + repCount);
 		
-		RegProperties regProperties = new RegProperties(callingInst, outputBuilder.fieldOffsetsFromZero());  // extract basic properties
+		RegProperties regProperties = new RegProperties(callingInst);  // extract basic properties
 		outputBuilder.setExternalInstanceProperties(regProperties, false);  // set external inst properties
      	     	
 	    // if an external register, call once per replicated set
@@ -179,7 +179,7 @@ public class ModRegister extends ModComponent  {
 			// call once per replicated register
 		    for (int rep=0; rep<repCount; rep++) {
 				
-				regProperties = new RegProperties(callingInst, outputBuilder.fieldOffsetsFromZero());  // extract basic properties
+				regProperties = new RegProperties(callingInst);  // extract basic properties
 				if (outputBuilder.visitEachReg()) regProperties.setId(regProperties.getId() + getRepSuffix(rep, repCount)); // update name based on rep #
 				outputBuilder.setExternalInstanceProperties(regProperties, false);  // set external inst properties 
 				outputBuilder.pushInstance(regProperties);
