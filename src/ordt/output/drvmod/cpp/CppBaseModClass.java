@@ -182,6 +182,7 @@ public class CppBaseModClass {
 		   // add class namespace to method
 		   String newSignature = this.getSignature();
 		   if (newSignature.startsWith("pure virtual")) return outList;  // no body if pure virtual method
+		   if (newSignature.contains("~") && newSignature.contains("default;")) return outList;  // no body if default destructor
 		   if (newSignature.startsWith("virtual ")) {
 			   newSignature = newSignature.replaceFirst("virtual\\s*", "");
 		   }
@@ -220,12 +221,10 @@ public class CppBaseModClass {
 	   }
    }
    
-
    /** return true if this model element has children */
    public boolean hasChildren() {
 	   return !children.isEmpty();
    }
-
 
 	/** create OrdtData class  */   
 	public static CppBaseModClass getOrdtDataClass() {
@@ -237,6 +236,12 @@ public class CppBaseModClass {
 		nMethod.addInitCall("std::vector<uint32_t>()");
 		nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(int _size, uint32_t _data)");
 		nMethod.addInitCall("std::vector<uint32_t>(_size, _data)");
+		nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(std::initializer_list<uint32_t> values)");
+		nMethod.addInitCall("std::vector<uint32_t>()");
+		nMethod.addStatement("this->reserve(values.size());");
+		nMethod.addStatement("for (auto it = values.end() - 1; it >= values.begin(); --it) { // Load values in reverse order so that initializer list order matches bit order in ordt_data (0th element is least significant word)");
+		nMethod.addStatement("  this->push_back(*it);");
+		nMethod.addStatement("}");
 		nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(const ordt_data& _data)");  // copy
 		nMethod.addInitCall("std::vector<uint32_t>(_data)");
 		
@@ -315,6 +320,8 @@ public class CppBaseModClass {
 		nMethod.addStatement("  std::cout << \"ERROR set_slice: specified slice is not contained in data\" << \"\\n\";");
 		nMethod.addStatement("  return;");
 		nMethod.addStatement("}");
+		nMethod.addStatement("slice_out.resize(hiword - loword + 1); // Resize slice_out before using at()");
+
 		nMethod.addStatement("int out_idx=0;");
 		nMethod.addStatement("for (int idx=loword; idx < hiword + 1; idx++) {");
 		//nMethod.addStatement("  std::cout << \"get_slice: current word[\" << idx << \"]=\" << this->at(idx) << \"\\n\";");
@@ -366,8 +373,10 @@ public class CppBaseModClass {
 		nMethod = newClass.addMethod(Vis.PUBLIC, "std::string to_string() const");
 		nMethod.addStatement("std::stringstream ss;");
 		nMethod.addStatement("ss << \"{\" << std::hex << std::showbase;");
-		nMethod.addStatement("for (size_t idx=this->size() - 1; idx >= 0; idx--) ");
-		nMethod.addStatement("   ss << \" \" << this->at(idx);");
+  		nMethod.addStatement("if (!this->empty()) {");
+  		nMethod.addStatement("    for (int idx = static_cast<int>(this->size()) - 1; idx >= 0; idx--)");
+  		nMethod.addStatement("       ss << \" \" << this->at(idx);");
+  		nMethod.addStatement("}");
 		nMethod.addStatement("ss << \" }\";");
 		nMethod.addStatement("return ss.str();");
 		
@@ -381,6 +390,7 @@ public class CppBaseModClass {
 		// ~ overload
 		nMethod = newClass.addMethod(Vis.PUBLIC, "ordt_data operator~()");
 		nMethod.addStatement("ordt_data temp;");
+		nMethod.addStatement("temp.resize(this->size());");
 		nMethod.addStatement("for (size_t idx=0; idx<this->size(); idx++) ");
 		nMethod.addStatement("   temp.at(idx) = ~ this->at(idx);");
 		nMethod.addStatement("return temp;");
@@ -388,6 +398,7 @@ public class CppBaseModClass {
 		// & overload
 		nMethod = newClass.addMethod(Vis.PUBLIC, "ordt_data operator&(const ordt_data& rhs)");
 		nMethod.addStatement("ordt_data temp;");
+		nMethod.addStatement("temp.resize(this->size());");
 		nMethod.addStatement("for (size_t idx=0; idx<this->size(); idx++) ");
 		nMethod.addStatement("   if (idx < rhs.size()) temp.at(idx) = this->at(idx) & rhs.at(idx);");
 		nMethod.addStatement("   else temp.at(idx) = 0;");
@@ -396,6 +407,7 @@ public class CppBaseModClass {
 		// | overload
 		nMethod = newClass.addMethod(Vis.PUBLIC, "ordt_data operator|(const ordt_data& rhs)");
 		nMethod.addStatement("ordt_data temp;");
+		nMethod.addStatement("temp.resize(this->size());");
 		nMethod.addStatement("for (size_t idx=0; idx<this->size(); idx++) ");
 		nMethod.addStatement("   if (idx < rhs.size()) temp.at(idx) = this->at(idx) | rhs.at(idx);");
 		nMethod.addStatement("   else temp.at(idx) = this->at(idx);");

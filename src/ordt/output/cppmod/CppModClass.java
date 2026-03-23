@@ -8,6 +8,10 @@ import ordt.extract.RegNumber;
 import ordt.extract.RegNumber.NumBase;
 import ordt.extract.RegNumber.NumFormat;
 import ordt.output.drvmod.cpp.CppBaseModClass;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 /** class for describing c++ classes used in CppMod */
 public class CppModClass extends CppBaseModClass {
@@ -178,8 +182,15 @@ public class CppModClass extends CppBaseModClass {
 	   if ("ordt_data".equals(fieldType)) { // special call if a wide field
 		   if (((resetVal == null) || !resetVal.isDefined())) initStr = "0"; // default to reset value of 0
 		   else if (resetVal.isNonZero()) { 
-			   MsgUtils.warnMessage("C++ model does not support non-zero init values for wide fields, field=" + instName);
-		       initStr="0";
+			   // create a vector initialization string of c++ ordt_data from resetVal
+			   ArrayList<Integer> resetValWords = new ArrayList<>(resetVal.toIntegerArrayList());
+			   Collections.reverse(resetValWords);
+			   List<String> stringNumbers = resetValWords.stream()
+                                            .map(String::valueOf)
+                                            .collect(Collectors.toList());
+			   initStr = "{ " + String.join(",", stringNumbers) + " }";
+			   //MsgUtils.infoMessage("C++ model will use reset value of " + initStr + "array=" + resetVal.toIntegerArrayList() + " for field=" + instName + " width=" + width + " instead of " + resetVal.toFormat(NumBase.Hex, NumFormat.Address));
+			   
 		   }
 		   else initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address);
 		   int words = width/32;

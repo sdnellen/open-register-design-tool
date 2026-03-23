@@ -224,6 +224,7 @@ public class CppModBuilder extends OutputBuilder {
     		writeStmt(commonHppBw, 0, "#include <algorithm>");  // min/max  
     		writeStmt(commonHppBw, 0, "#include <string>");    
     		writeStmt(commonHppBw, 0, "#include <sstream>");    
+    		writeStmt(commonHppBw, 0, "#include <initializer_list>");    
     	    writeStmt(commonHppBw, 0, "#define quote(x) #x"); // for debug display of vars
     		writeStmt(commonHppBw, 0, "");		   
    		
@@ -266,12 +267,18 @@ public class CppModBuilder extends OutputBuilder {
     		writeStmt(hppBw, 0, "#include <mutex>");    // reg mutex
     		writeStmt(hppBw, 0, "#include <atomic>");    // field data atomic
     	    writeStmt(hppBw, 0, "#define quote(x) #x"); // for debug display of vars
-    		writeStmt(hppBw, 0, "");		   
-   		
+    		writeStmt(hppBw, 0, "");
+    		writeStmt(hppBw, 0, "// Undefine assert macro to avoid conflicts with field names");
+    		writeStmt(hppBw, 0, "#undef assert");
+    		writeStmt(hppBw, 0, "");
+			   		
     		// write the cpp file header
     		writeHeader(cppBw, commentPrefix);
     		writeStmt(cppBw, 0, "#include \"ordt_pio_common.hpp\"");
     		writeStmt(cppBw, 0, "#include \"ordt_pio.hpp\"");
+    		writeStmt(cppBw, 0, "");
+    		writeStmt(cppBw, 0, "// Undefine assert macro to avoid conflicts with field names");
+    		writeStmt(cppBw, 0, "#undef assert");
     		writeStmt(cppBw, 0, "");
     		
     		// define r/w modes
@@ -323,6 +330,7 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod.addInitCall("m_startaddress(_m_startaddress)");
 		nMethod.addInitCall("m_endaddress(_m_endaddress)");
 		// methods
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_addr_elem() = default;");
 		newClass.addMethod(Vis.PUBLIC, "pure virtual int write(const uint64_t &addr, const ordt_data &wdata)");
 		newClass.addMethod(Vis.PUBLIC, "pure virtual int read(const uint64_t &addr, ordt_data &rdata)");  
 		nMethod = newClass.addMethod(Vis.PUBLIC, "bool containsAddress(const uint64_t &addr)");
@@ -377,6 +385,7 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod.addStatement("return nullptr;");
 		
 		// methods
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_regset() = default;");
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");  
 		//nMethod.addStatement("   std::cout << \"regset write: ---- addr=\"<< addr << \", data=\" << wdata.to_string() << \"\\n\";");
 		nMethod.addStatement("   if (this->containsAddress(addr)) {");
@@ -487,6 +496,8 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(const " + className + " &_old)");  
 		nMethod.addInitCall("ordt_addr_elem(_old)");  
 		nMethod.addInitCall("m_mutex()");  
+		// methods
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_reg() = default;");
 		// write methods
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void write(const ordt_data &wdata)");  // will be overriden by child classes
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");

@@ -592,6 +592,51 @@ public class RegNumber implements Comparable<RegNumber> {
 		return retVal;
 	}
 
+	/** return an ArrayList of 32-bit Integers from each 32 bits of this RegNumber
+	 *  Length of the ArrayList will be vectorLen/32 if vectorLen is defined, 
+	 *  else determined by the bit length of the value of the RegNumber.  
+	 *  Location 0 in the returned array will correspond to the least significant 32b word.
+	 */
+	public ArrayList<Integer> toIntegerArrayList() {
+		ArrayList<Integer> result = new ArrayList<Integer>();
+		
+		if (!isDefined()) {
+			return result; // return empty list if not defined
+		}
+		// determine the number of 32-bit words needed
+		int numWords;
+		if (vectorLen != null) {
+			// use vectorLen if defined, round up to handle any partial words
+			numWords = (vectorLen + 31) / 32;
+		} else {
+			// use bit length of the value, round up to handle any partial words
+			int bitLength = value.bitLength();
+			if (bitLength == 0) bitLength = 1; // handle zero case
+			numWords = (bitLength + 31) / 32;
+		}
+		// extract each 32-bit word starting from least significant
+		for (int i = 0; i < numWords; i++) {
+			int startBit = i * 32;
+			int wordWidth = Math.min(32, (vectorLen != null ? vectorLen : value.bitLength()) - startBit);
+			
+			// handle case where we're beyond the actual bit length
+			if (wordWidth <= 0) {
+				result.add(0);
+				continue;
+			}
+			// extract the 32-bit subvector
+			RegNumber subVector = getSubVector(startBit, wordWidth);
+			if (subVector != null) {
+				Integer wordValue = subVector.toInteger();
+				result.add(wordValue != null ? wordValue : 0);
+			} else {
+				result.add(0);
+			}
+		}
+		
+		return result;
+	}
+
 
 	@Override
 	public int hashCode() {
