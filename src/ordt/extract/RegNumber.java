@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.stream.Collectors;
 
 /** class representing a number for addressing/hw vectors */
 public class RegNumber implements Comparable<RegNumber> {
@@ -599,7 +601,7 @@ public class RegNumber implements Comparable<RegNumber> {
 	 */
 	public ArrayList<Integer> toIntegerArrayList() {
 		ArrayList<Integer> result = new ArrayList<Integer>();
-		
+
 		if (!isDefined()) {
 			return result; // return empty list if not defined
 		}
@@ -618,7 +620,6 @@ public class RegNumber implements Comparable<RegNumber> {
 		for (int i = 0; i < numWords; i++) {
 			int startBit = i * 32;
 			int wordWidth = Math.min(32, (vectorLen != null ? vectorLen : value.bitLength()) - startBit);
-			
 			// handle case where we're beyond the actual bit length
 			if (wordWidth <= 0) {
 				result.add(0);
@@ -633,10 +634,15 @@ public class RegNumber implements Comparable<RegNumber> {
 				result.add(0);
 			}
 		}
-		
 		return result;
 	}
 
+	/** create a string representation of the reversed result using specified delimiter, prefix, and suffix */
+	public String toDisplayString(String delimiter, String prefix, String suffix) {
+		ArrayList<Integer> words = toIntegerArrayList();
+		Collections.reverse(words);
+		return prefix + String.join(delimiter, words.stream().map(String::valueOf).collect(Collectors.toList())) + suffix;
+	}
 
 	@Override
 	public int hashCode() {

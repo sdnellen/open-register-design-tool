@@ -8,10 +8,6 @@ import ordt.extract.RegNumber;
 import ordt.extract.RegNumber.NumBase;
 import ordt.extract.RegNumber.NumFormat;
 import ordt.output.drvmod.cpp.CppBaseModClass;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.ArrayList;
 
 /** class for describing c++ classes used in CppMod */
 public class CppModClass extends CppBaseModClass {
@@ -164,44 +160,30 @@ public class CppModClass extends CppBaseModClass {
     * @param width - width of field in bits
     */
    public void addChildFieldInfo(String instName, Integer lowIndex, Integer width, RegNumber resetVal, String rMode, String wMode) {
-	   children.add(instName);
-	   // set field data type based on width
-	   String fieldType;  
-	   //fieldType = "uint64_t";
-	   //
-	   if (width <= 8) fieldType = "uint_fast8_t";
-	   else if (width <= 32) fieldType = "uint32_t";
-	   //else fieldType = "uint64_t";
-	   //
-	   else if (width <= 64) fieldType = "uint64_t";
-	   else  fieldType = "ordt_data";
-	   // create child define 
-	   this.addDefine(Vis.PUBLIC, "ordt_field<" + fieldType + "> " + instName); 
-	   // create field init call
-	   String initStr = "";
-	   if ("ordt_data".equals(fieldType)) { // special call if a wide field
-		   if (((resetVal == null) || !resetVal.isDefined())) initStr = "0"; // default to reset value of 0
-		   else if (resetVal.isNonZero()) { 
-			   // create a vector initialization string of c++ ordt_data from resetVal
-			   ArrayList<Integer> resetValWords = new ArrayList<>(resetVal.toIntegerArrayList());
-			   Collections.reverse(resetValWords);
-			   List<String> stringNumbers = resetValWords.stream()
-                                            .map(String::valueOf)
-                                            .collect(Collectors.toList());
-			   initStr = "{ " + String.join(",", stringNumbers) + " }";
-			   //MsgUtils.infoMessage("C++ model will use reset value of " + initStr + "array=" + resetVal.toIntegerArrayList() + " for field=" + instName + " width=" + width + " instead of " + resetVal.toFormat(NumBase.Hex, NumFormat.Address));
-			   
-		   }
-		   else initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address);
-		   int words = width/32;
-		   this.addInitCall(instName + "(" + lowIndex + ", " + width + "," + words + ", " + initStr + ", " + rMode + ", " + wMode + ")");
-	   }
-	   // else if a base type init
-	   else {
-		   if (((resetVal == null) || !resetVal.isDefined())) initStr = "0"; // default to reset value of 0
-		   else initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address);
-		   this.addInitCall(instName + "(" + lowIndex + ", " + width + ", " + initStr + ", " + rMode + ", " + wMode + ")");		   
-	   }
+		children.add(instName);
+		// set field data type based on width
+		String fieldType;  
+		//fieldType = "uint64_t";
+		//
+		if (width <= 8) fieldType = "uint_fast8_t";
+		else if (width <= 32) fieldType = "uint32_t";
+		//else fieldType = "uint64_t";
+		//
+		else if (width <= 64) fieldType = "uint64_t";
+		else  fieldType = "ordt_data";
+		// create child define 
+		this.addDefine(Vis.PUBLIC, "ordt_field<" + fieldType + "> " + instName); 
+		// set field init value
+		String initStr = "";
+		if ("ordt_data".equals(fieldType)) { 
+			if (((resetVal == null) || !resetVal.isDefined())) initStr = "1, 0"; // default to single word reset value of 0 (use constructor that takes vector size and default value)
+			else initStr = resetVal.toDisplayString(",", "{ ", " }"); // create a vector initialization string of c++ ordt_data from resetVal
+		}
+		else if (((resetVal == null) || !resetVal.isDefined())) initStr = "0"; // default to reset value of 0
+		else initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address); // else if a base type initialize with hex string
+		// add fhe field init call with reset value and r/w modes
+		this.addInitCall(instName + "(" + lowIndex + ", " + width + ", " + initStr + ", " + rMode + ", " + wMode + ")");		   
+
 	   // add field read/write calls in reg read method
 	   CppMethod read = this.getTaggedMethod("read");
 	   read.addStatement(instName + ".read(rdata);");
