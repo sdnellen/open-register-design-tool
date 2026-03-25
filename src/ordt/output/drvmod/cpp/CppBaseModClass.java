@@ -182,7 +182,7 @@ public class CppBaseModClass {
 		   // add class namespace to method
 		   String newSignature = this.getSignature();
 		   if (newSignature.startsWith("pure virtual")) return outList;  // no body if pure virtual method
-		   if (newSignature.contains("~") && newSignature.contains("default;")) return outList;  // no body if default destructor
+		   if (newSignature.contains("~") && newSignature.endsWith("default")) return outList;  // no body if default destructor
 		   if (newSignature.startsWith("virtual ")) {
 			   newSignature = newSignature.replaceFirst("virtual\\s*", "");
 		   }

@@ -28,8 +28,8 @@ public class CppModClass extends CppBaseModClass {
 		   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "()");  // dont pass start/end into root constructor
 		   newClass.tagMethod("root constructor", nMethod);  // tag this method so we can update		   
 	   }
-	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress)");
-	   nMethod.addInitCall("ordt_regset(_m_startaddress, _m_endaddress)");
+	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string &_m_name)");
+	   nMethod.addInitCall("ordt_regset(_m_startaddress, _m_endaddress, _m_name)");
 	   // override the child ptr update function
 	   nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void update_child_ptrs()");   
 	   nMethod.addStatement("m_children.clear();");
@@ -51,7 +51,7 @@ public class CppModClass extends CppBaseModClass {
  * @param className */
    public void addRootInitCall(String className, RegNumber startAddress, RegNumber endAddress) {
 	   CppMethod rootConstructor = this.getTaggedMethod("root constructor"); // first method of root is constructor w/ no args
-	   rootConstructor.addInitCall(className + "(" + startAddress.toFormat(NumBase.Hex, NumFormat.Address) + ", " + endAddress.toFormat(NumBase.Hex, NumFormat.Address) + ")"); // delegated constructor
+	   rootConstructor.addInitCall(className + "(" + startAddress.toFormat(NumBase.Hex, NumFormat.Address) + ", " + endAddress.toFormat(NumBase.Hex, NumFormat.Address) + ", \"regmodel\")"); // delegated constructor
    }
 
    /** add info to reference a child regset in this c++ class 
@@ -76,7 +76,7 @@ public class CppModClass extends CppBaseModClass {
 		   // create child init call
 		   String strideStr = ((stride == null) || (!stride.isDefined()))? byteSize.toFormat(NumBase.Hex, NumFormat.Address) : stride.toFormat(NumBase.Hex, NumFormat.Address);
 		   this.addInitCall(instName + "(_m_startaddress + " + startOffset.toFormat(NumBase.Hex, NumFormat.Address) + 
-				   ", _m_startaddress + " + endOffset.toFormat(NumBase.Hex, NumFormat.Address) + ", " + reps + ", " + strideStr + ")");
+				   ", _m_startaddress + " + endOffset.toFormat(NumBase.Hex, NumFormat.Address) + ", " + reps + ", " + strideStr + ", \"" + instName + "\")");
 	   }
 	   // otherwise if a single regset
 	   else {
@@ -84,7 +84,7 @@ public class CppModClass extends CppBaseModClass {
 		   this.addDefine(Vis.PUBLIC, className + " " + instName);  
 		   // create init
 		   this.addInitCall(instName + "(_m_startaddress + " + startOffset.toFormat(NumBase.Hex, NumFormat.Address) + 
-				   ", _m_startaddress + " + endOffset.toFormat(NumBase.Hex, NumFormat.Address) + ")");
+				   ", _m_startaddress + " + endOffset.toFormat(NumBase.Hex, NumFormat.Address) + ", \"" + instName + "\")");
 	   }
 	   // add to the ordered child list in both constructor and update method 
 	   this.addConstructorStatement("m_children.push_back(&" + instName + ");");  // push ptr of child onto vector 
@@ -96,8 +96,8 @@ public class CppModClass extends CppBaseModClass {
 	   CppModClass newClass = new CppModClass(className);
 	   newClass.addParent("ordt_reg");
 	   // constructor
-	   CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress)");
-	   nMethod.addInitCall("ordt_reg(_m_startaddress, _m_endaddress)");
+	   CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string &_m_name)");
+	   nMethod.addInitCall("ordt_reg(_m_startaddress, _m_endaddress, _m_name)");
 	   
 	   // overload write methods
 	   nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");
@@ -109,7 +109,7 @@ public class CppModClass extends CppBaseModClass {
 	   nMethod.addStatement("      return 0;");
 	   nMethod.addStatement("   }");
 	   nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-	   nMethod.addStatement("   std::cout << \"--> write to invalid address \" << addr << \" in reg " + className + "\\n\";" );
+	   nMethod.addStatement("   std::cout << \"--> write to invalid address \" << std::hex << addr << \" in reg " + className + "\\n\";" );
 	   nMethod.addStatement("#endif");
 	   nMethod.addStatement("   return 8;" );
 	   
@@ -127,7 +127,7 @@ public class CppModClass extends CppBaseModClass {
 	   nMethod.addStatement("      return 0;");
 	   nMethod.addStatement("   }");
 	   nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-	   nMethod.addStatement("   std::cout << \"--> read to invalid address \" << addr << \" in reg " + className + "\\n\";" );
+	   nMethod.addStatement("   std::cout << \"--> read to invalid address \" << std::hex << addr << \" in reg " + className + "\\n\";" );
 	   nMethod.addStatement("#endif");
 	   nMethod.addStatement("   rdata.clear();");
 	   nMethod.addStatement("   return 8;" );

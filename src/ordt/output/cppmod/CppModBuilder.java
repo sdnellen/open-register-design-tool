@@ -324,13 +324,15 @@ public class CppModBuilder extends OutputBuilder {
 		String className = "ordt_addr_elem";
 		CppModClass newClass = new CppModClass(className);
 		newClass.addDefine(Vis.PROTECTED, "uint64_t m_startaddress");
-		newClass.addDefine(Vis.PROTECTED, "uint64_t m_endaddress");
+		newClass.addDefine(Vis.PROTECTED, "uint64_t m_endaddress"); 
+		newClass.addDefine(Vis.PROTECTED, "std::string m_name");
 		// constructors
-		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress)");  
+		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string& _m_name)");  
 		nMethod.addInitCall("m_startaddress(_m_startaddress)");
 		nMethod.addInitCall("m_endaddress(_m_endaddress)");
+		nMethod.addInitCall("m_name(_m_name)");
 		// methods
-		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_addr_elem() = default;");
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_addr_elem() = default");
 		newClass.addMethod(Vis.PUBLIC, "pure virtual int write(const uint64_t &addr, const ordt_data &wdata)");
 		newClass.addMethod(Vis.PUBLIC, "pure virtual int read(const uint64_t &addr, ordt_data &rdata)");  
 		nMethod = newClass.addMethod(Vis.PUBLIC, "bool containsAddress(const uint64_t &addr)");
@@ -359,48 +361,36 @@ public class CppModBuilder extends OutputBuilder {
 		newClass.addDefine(Vis.PROTECTED, "std::vector<ordt_addr_elem *>  m_children");
 		newClass.addDefine(Vis.PRIVATE, "ordt_addr_elem* childElem");  
 		// constructors
-		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress)");  
-		nMethod.addInitCall("ordt_addr_elem(_m_startaddress, _m_endaddress)");
+		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string& _m_name)");  
+		nMethod.addInitCall("ordt_addr_elem(_m_startaddress, _m_endaddress, _m_name)");
 		// address search method
 		nMethod = newClass.addMethod(Vis.PRIVATE, "ordt_addr_elem* findAddrElem(const uint64_t &addr)");  
-		nMethod.addStatement("int lo = 0;");
-		nMethod.addStatement("int hi = m_children.size()-1;");
-		nMethod.addStatement("int mid = 0;");
-		//nMethod.addStatement("for (int idx=lo; idx <= hi; idx++) {");
-		//nMethod.addStatement("   std::cout << \"findAddrElem: idx=\"<< idx << \"....\\n\";this->m_children.at(idx)->containsAddress(addr); }");
-		nMethod.addStatement("while (lo <= hi) {");
-		nMethod.addStatement("   mid = (lo + hi) / 2;");
-		//nMethod.addStatement("   std::cout << \"findAddrElem: looking for addr=\"<< addr << \" at idx=\" << mid << \", lo=\" << lo << \", hi=\" << hi << \"\\n\";");
-		nMethod.addStatement("   if (m_children[mid]->containsAddress(addr)) {");
-		nMethod.addStatement("      //outElem = m_children[mid];");
-		//nMethod.addStatement("      std::cout << \"findAddrElem: ordt_regset contained addr=\"<< addr << \" at idx=\" << mid << \"\\n\";");
-		nMethod.addStatement("      return m_children[mid];");
-		nMethod.addStatement("   }");
-		nMethod.addStatement("   else if (m_children[mid]->isAboveAddress(addr))");
-		nMethod.addStatement("      hi = mid - 1;");
-		nMethod.addStatement("   else");
-		nMethod.addStatement("      lo = mid + 1;");
-		nMethod.addStatement("}");
-		//nMethod.addStatement("std::cout << \"findAddrElem: did not find addr=\"<< addr << \"\\n\";");
-		nMethod.addStatement("return nullptr;");
+		nMethod.addStatement("for (auto* child : m_children) {");
+		nMethod.addStatement("    if (child->containsAddress(addr)) {");
+		nMethod.addStatement("      return child;");
+		nMethod.addStatement("    }");
+		nMethod.addStatement("  }");
+		nMethod.addStatement("  return nullptr;");
 		
 		// methods
-		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_regset() = default;");
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_regset() = default");
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");  
-		//nMethod.addStatement("   std::cout << \"regset write: ---- addr=\"<< addr << \", data=\" << wdata.to_string() << \"\\n\";");
+		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
+		nMethod.addStatement("   std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("#endif");
 		nMethod.addStatement("   if (this->containsAddress(addr)) {");
-		//nMethod.addStatement("      std::cout << \"regset write: ordt_regset contains addr=\"<< addr << \"\\n\";");
 		nMethod.addStatement("      childElem = this->findAddrElem(addr);");
 		nMethod.addStatement("      if (childElem != nullptr) { return childElem->write(addr, wdata); }");
-		//nMethod.addStatement("      else std::cout << \"write: findAddrElem returned nullptr, addr=\"<< addr << \"\\n\";" );
 		nMethod.addStatement("   }");
 		nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-		nMethod.addStatement("   std::cout << \"--> write to invalid address \" << addr << \" in regset\\n\";" );
+		nMethod.addStatement("   std::cout << \"--> write to invalid address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
 		nMethod.addStatement("#endif");
 		nMethod.addStatement("   return 8;" );
 		
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int read(const uint64_t &addr, ordt_data &rdata)");  
-		//nMethod.addStatement("   std::cout << \"regset read: ---- addr=\"<< addr << \"\\n\";");
+		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
+		nMethod.addStatement("   std::cout << \"--> initiating read to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("#endif");
 		nMethod.addStatement("   if (this->containsAddress(addr)) {");
 		//nMethod.addStatement("      std::cout << \"regset read: ordt_regset contains addr=\"<< addr << \"\\n\";");
 		nMethod.addStatement("      childElem = this->findAddrElem(addr);");
@@ -408,7 +398,7 @@ public class CppModBuilder extends OutputBuilder {
 		//nMethod.addStatement("      else std::cout << \"read: findAddrElem returned nullptr, addr=\"<< addr << \"\\n\";" );
 		nMethod.addStatement("   }");
 		nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-		nMethod.addStatement("   std::cout << \"--> read to invalid address \" << addr << \" in regset\\n\";" );
+		nMethod.addStatement("   std::cout << \"--> read to invalid address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
 		nMethod.addStatement("#endif");
 		nMethod.addStatement("   rdata.clear();");
 		nMethod.addStatement("   return 8;" );
@@ -428,20 +418,21 @@ public class CppModBuilder extends OutputBuilder {
 		writeStmt(hppBw, 0, "    std::vector<T> vec;");  
 		writeStmt(hppBw, 0, "    uint64_t m_stride;");  
 		writeStmt(hppBw, 0, "  public:");
-		writeStmt(hppBw, 0, "    ordt_addr_elem_array(uint64_t _m_startaddress, uint64_t _m_endaddress, int _reps, uint64_t _m_stride);");
+		writeStmt(hppBw, 0, "    ordt_addr_elem_array(uint64_t _m_startaddress, uint64_t _m_endaddress, int _reps, uint64_t _m_stride, const std::string& _m_name);");
 		writeStmt(hppBw, 0, "    virtual int write(const uint64_t &addr, const ordt_data &wdata);");
 		writeStmt(hppBw, 0, "    virtual int read(const uint64_t &addr, ordt_data &rdata);");
 		writeStmt(hppBw, 0, "};");
 		writeStmt(hppBw, 0, "");
 
 		writeStmt(hppBw, 0, "template<typename T>");
-		writeStmt(hppBw, 0, "ordt_addr_elem_array<T>::ordt_addr_elem_array(uint64_t _m_startaddress, uint64_t _m_endaddress, int _reps, uint64_t _m_stride)");
-		writeStmt(hppBw, 0, "   : ordt_addr_elem(_m_startaddress, _m_endaddress + (_m_stride * (_reps - 1))), m_stride(_m_stride) {");
+		writeStmt(hppBw, 0, "ordt_addr_elem_array<T>::ordt_addr_elem_array(uint64_t _m_startaddress, uint64_t _m_endaddress, int _reps, uint64_t _m_stride, const std::string& _m_name)");
+		writeStmt(hppBw, 0, "   : ordt_addr_elem(_m_startaddress, _m_endaddress + (_m_stride * (_reps - 1)), _m_name), m_stride(_m_stride) {");
 		writeStmt(hppBw, 0, "   this->reserve(_reps);");
 		writeStmt(hppBw, 0, "   uint64_t el_startaddress = _m_startaddress;");
 		writeStmt(hppBw, 0, "   uint64_t el_endaddress = _m_endaddress;");
 		writeStmt(hppBw, 0, "   for(int idx=0; idx<_reps; idx++) {");
-		writeStmt(hppBw, 0, "      std::unique_ptr<T> new_elem(new T(el_startaddress, el_endaddress));");  // push_back is a copy so manage ptr
+		writeStmt(hppBw, 0, "      std::string new_name = _m_name + \"[\" + std::to_string(idx) + \"]\";");
+		writeStmt(hppBw, 0, "      std::unique_ptr<T> new_elem(new T(el_startaddress, el_endaddress, new_name));");  // push_back is a copy so manage ptr
 		writeStmt(hppBw, 0, "      this->push_back(*new_elem);");  // this copy messes up children ptr assigns made in constructor so need update 
 		writeStmt(hppBw, 0, "      this->back().update_child_ptrs();");  // update ptrs
 		writeStmt(hppBw, 0, "      el_startaddress += _m_stride;");
@@ -452,14 +443,15 @@ public class CppModBuilder extends OutputBuilder {
 
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "int ordt_addr_elem_array<T>::write(const uint64_t &addr, const ordt_data &wdata) {");
-		//writeStmt(hppBw, 0, "   std::cout << \"addr_elem array write: ---- addr=\"<< addr << \", data=\" << wdata.to_string() << \"\\n\";");
+		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_TRACE");
+		writeStmt(hppBw, 0, "   std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
+		writeStmt(hppBw, 0, "#endif");
 		writeStmt(hppBw, 0, "   if (this->containsAddress(addr)) {");
 		writeStmt(hppBw, 0, "      uint64_t idx = (addr - m_startaddress) / m_stride;");
-		//writeStmt(hppBw, 0, "      std::cout << \"addr_elem array write: array contains addr=\" << addr << \" at idx=\" << idx << \"\\n\";");
 		writeStmt(hppBw, 0, "      if (idx < this->size()) return this->at(idx).write(addr, wdata);");
 		writeStmt(hppBw, 0, "   }");
 		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_VERBOSE");
-		writeStmt(hppBw, 0, "   std::cout << \"--> write to invalid address \" << addr << \" in arrayed regset\\n\";" );
+		writeStmt(hppBw, 0, "   std::cout << \"--> write to invalid address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
 		writeStmt(hppBw, 0, "#endif");
 		writeStmt(hppBw, 0, "   return 8;" );
 		writeStmt(hppBw, 0, "}");
@@ -467,14 +459,15 @@ public class CppModBuilder extends OutputBuilder {
 		
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "int ordt_addr_elem_array<T>::read(const uint64_t &addr, ordt_data &rdata) {");
-		//writeStmt(hppBw, 0, "   std::cout << \"addr_elem array read: ---- addr=\"<< addr << \", start=\" << m_startaddress << \", end=\" << m_endaddress<< \", stride=\" << m_stride<< \"\\n\";");
+		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_TRACE");
+		writeStmt(hppBw, 0, "   std::cout << \"--> initiating read from address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
+		writeStmt(hppBw, 0, "#endif");
 		writeStmt(hppBw, 0, "   if (this->containsAddress(addr)) {");
 		writeStmt(hppBw, 0, "      uint64_t idx = (addr - m_startaddress) / m_stride;");
-		//writeStmt(hppBw, 0, "      std::cout << \"addr_elem array read: array contains addr=\" << addr << \" at idx=\" << idx << \", array size=\" << this->size() << \"\\n\";");
 		writeStmt(hppBw, 0, "      if (idx < this->size()) return this->at(idx).read(addr, rdata);");
 		writeStmt(hppBw, 0, "   }");
 		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_VERBOSE");
-		writeStmt(hppBw, 0, "   std::cout << \"--> read to invalid address \" << addr << \" in arrayed regset\\n\";" );
+		writeStmt(hppBw, 0, "   std::cout << \"--> read to invalid address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
 		writeStmt(hppBw, 0, "#endif");
 		writeStmt(hppBw, 0, "   rdata.clear();");
 		writeStmt(hppBw, 0, "   return 8;" );
@@ -490,14 +483,14 @@ public class CppModBuilder extends OutputBuilder {
 		// define mutex for reg
 		newClass.addDefine(Vis.PUBLIC, "std::mutex  m_mutex");
 		// constructors
-		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress)");  
-		nMethod.addInitCall("ordt_addr_elem(_m_startaddress, _m_endaddress)");  
+		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string &_m_name)");  
+		nMethod.addInitCall("ordt_addr_elem(_m_startaddress, _m_endaddress, _m_name)");  
 		// redefine copy constructor since we have a mutex
 		nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(const " + className + " &_old)");  
 		nMethod.addInitCall("ordt_addr_elem(_old)");  
 		nMethod.addInitCall("m_mutex()");  
 		// methods
-		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_reg() = default;");
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_reg() = default");
 		// write methods
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void write(const ordt_data &wdata)");  // will be overriden by child classes
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");
