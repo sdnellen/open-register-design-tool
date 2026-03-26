@@ -266,6 +266,7 @@ public class CppModBuilder extends OutputBuilder {
     		writeStmt(hppBw, 0, "#include <sstream>");    
     		writeStmt(hppBw, 0, "#include <mutex>");    // reg mutex
     		writeStmt(hppBw, 0, "#include <atomic>");    // field data atomic
+			writeStmt(hppBw, 0, "#include <functional>");    // regset child vector of references
     	    writeStmt(hppBw, 0, "#define quote(x) #x"); // for debug display of vars
     		writeStmt(hppBw, 0, "");
     		writeStmt(hppBw, 0, "// Undefine assert macro to avoid conflicts with field names");
@@ -358,25 +359,27 @@ public class CppModBuilder extends OutputBuilder {
 		String className = "ordt_regset";
 		CppModClass newClass = new CppModClass(className);
 		newClass.addParent("ordt_addr_elem");
-		newClass.addDefine(Vis.PROTECTED, "std::vector<ordt_addr_elem *>  m_children");
+		newClass.addDefine(Vis.PROTECTED, "std::vector<std::reference_wrapper<ordt_addr_elem>>  m_children");
 		newClass.addDefine(Vis.PRIVATE, "ordt_addr_elem* childElem");  
 		// constructors
 		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string& _m_name)");  
 		nMethod.addInitCall("ordt_addr_elem(_m_startaddress, _m_endaddress, _m_name)");
 		// address search method
 		nMethod = newClass.addMethod(Vis.PRIVATE, "ordt_addr_elem* findAddrElem(const uint64_t &addr)");  
-		nMethod.addStatement("for (auto* child : m_children) {");
+		nMethod.addStatement("for (auto& child_ref : m_children) {");
+		nMethod.addStatement("    ordt_addr_elem* child = &child_ref.get();");
+		nMethod.addStatement("    //std::cout << \"findAddrElem checking child \" << child->m_name << \" with start address 0x\" << std::hex << child->m_startaddress << \" and end address 0x\" << std::hex << child->m_endaddress << \"\\n\";");
 		nMethod.addStatement("    if (child->containsAddress(addr)) {");
-		nMethod.addStatement("      return child;");
+		nMethod.addStatement("        return child;");
 		nMethod.addStatement("    }");
-		nMethod.addStatement("  }");
-		nMethod.addStatement("  return nullptr;");
-		
+		nMethod.addStatement("}");
+		nMethod.addStatement("return nullptr;");
+	
 		// methods
 		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_regset() = default");
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");  
 		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
-		nMethod.addStatement("   std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("   std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \", data=\" << wdata.to_string() << \", start address=0x\" << std::hex << this->m_startaddress << \", end address=0x\" << std::hex << this->m_endaddress << \", offset=0x\" << std::hex << (addr - this->m_startaddress) << \"\\n\";" );
 		nMethod.addStatement("#endif");
 		nMethod.addStatement("   if (this->containsAddress(addr)) {");
 		nMethod.addStatement("      childElem = this->findAddrElem(addr);");
@@ -389,7 +392,7 @@ public class CppModBuilder extends OutputBuilder {
 		
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int read(const uint64_t &addr, ordt_data &rdata)");  
 		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
-		nMethod.addStatement("   std::cout << \"--> initiating read to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("   std::cout << \"--> initiating read to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \", start address=0x\" << std::hex << this->m_startaddress << \", end address=0x\" << std::hex << this->m_endaddress << \", offset=0x\" << std::hex << (addr - this->m_startaddress) << \"\\n\";" );
 		nMethod.addStatement("#endif");
 		nMethod.addStatement("   if (this->containsAddress(addr)) {");
 		//nMethod.addStatement("      std::cout << \"regset read: ordt_regset contains addr=\"<< addr << \"\\n\";");
@@ -426,51 +429,50 @@ public class CppModBuilder extends OutputBuilder {
 
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "ordt_addr_elem_array<T>::ordt_addr_elem_array(uint64_t _m_startaddress, uint64_t _m_endaddress, int _reps, uint64_t _m_stride, const std::string& _m_name)");
-		writeStmt(hppBw, 0, "   : ordt_addr_elem(_m_startaddress, _m_endaddress + (_m_stride * (_reps - 1)), _m_name), m_stride(_m_stride) {");
-		writeStmt(hppBw, 0, "   this->reserve(_reps);");
-		writeStmt(hppBw, 0, "   uint64_t el_startaddress = _m_startaddress;");
-		writeStmt(hppBw, 0, "   uint64_t el_endaddress = _m_endaddress;");
-		writeStmt(hppBw, 0, "   for(int idx=0; idx<_reps; idx++) {");
-		writeStmt(hppBw, 0, "      std::string new_name = _m_name + \"[\" + std::to_string(idx) + \"]\";");
-		writeStmt(hppBw, 0, "      std::unique_ptr<T> new_elem(new T(el_startaddress, el_endaddress, new_name));");  // push_back is a copy so manage ptr
-		writeStmt(hppBw, 0, "      this->push_back(*new_elem);");  // this copy messes up children ptr assigns made in constructor so need update 
-		writeStmt(hppBw, 0, "      this->back().update_child_ptrs();");  // update ptrs
-		writeStmt(hppBw, 0, "      el_startaddress += _m_stride;");
-		writeStmt(hppBw, 0, "      el_endaddress += _m_stride;");
-		writeStmt(hppBw, 0, "   }");
+		writeStmt(hppBw, 0, "    : ordt_addr_elem(_m_startaddress, _m_endaddress + (_m_stride * (_reps - 1)), _m_name), m_stride(_m_stride) {");
+		writeStmt(hppBw, 0, "    this->reserve(_reps);");
+		writeStmt(hppBw, 0, "    uint64_t el_startaddress = _m_startaddress;");
+		writeStmt(hppBw, 0, "    uint64_t el_endaddress = _m_endaddress;");
+		writeStmt(hppBw, 0, "    for(int idx=0; idx<_reps; idx++) {");
+		writeStmt(hppBw, 0, "        std::string new_name = _m_name + \"[\" + std::to_string(idx) + \"]\";");	
+		writeStmt(hppBw, 0, "        this->emplace_back(el_startaddress, el_endaddress, new_name);"); // changed to emplace to avoid copy with push_back
+		writeStmt(hppBw, 0, "        this->back().update_child_ptrs();");  // update ptrs
+		writeStmt(hppBw, 0, "        el_startaddress += _m_stride;");
+		writeStmt(hppBw, 0, "        el_endaddress += _m_stride;");
+		writeStmt(hppBw, 0, "    }");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "int ordt_addr_elem_array<T>::write(const uint64_t &addr, const ordt_data &wdata) {");
 		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_TRACE");
-		writeStmt(hppBw, 0, "   std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
+		writeStmt(hppBw, 0, "    std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
 		writeStmt(hppBw, 0, "#endif");
-		writeStmt(hppBw, 0, "   if (this->containsAddress(addr)) {");
-		writeStmt(hppBw, 0, "      uint64_t idx = (addr - m_startaddress) / m_stride;");
-		writeStmt(hppBw, 0, "      if (idx < this->size()) return this->at(idx).write(addr, wdata);");
-		writeStmt(hppBw, 0, "   }");
+		writeStmt(hppBw, 0, "    if (this->containsAddress(addr)) {");
+		writeStmt(hppBw, 0, "        uint64_t idx = (addr - m_startaddress) / m_stride;");
+		writeStmt(hppBw, 0, "        if (idx < this->size()) return this->at(idx).write(addr, wdata);");
+		writeStmt(hppBw, 0, "    }");
 		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_VERBOSE");
-		writeStmt(hppBw, 0, "   std::cout << \"--> write to invalid address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
+		writeStmt(hppBw, 0, "    std::cout << \"--> write to invalid address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
 		writeStmt(hppBw, 0, "#endif");
-		writeStmt(hppBw, 0, "   return 8;" );
+		writeStmt(hppBw, 0, "    return 8;" );
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 		
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "int ordt_addr_elem_array<T>::read(const uint64_t &addr, ordt_data &rdata) {");
 		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_TRACE");
-		writeStmt(hppBw, 0, "   std::cout << \"--> initiating read from address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
+		writeStmt(hppBw, 0, "    std::cout << \"--> initiating read from address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
 		writeStmt(hppBw, 0, "#endif");
-		writeStmt(hppBw, 0, "   if (this->containsAddress(addr)) {");
-		writeStmt(hppBw, 0, "      uint64_t idx = (addr - m_startaddress) / m_stride;");
-		writeStmt(hppBw, 0, "      if (idx < this->size()) return this->at(idx).read(addr, rdata);");
-		writeStmt(hppBw, 0, "   }");
+		writeStmt(hppBw, 0, "    if (this->containsAddress(addr)) {");
+		writeStmt(hppBw, 0, "        uint64_t idx = (addr - m_startaddress) / m_stride;");
+		writeStmt(hppBw, 0, "        if (idx < this->size()) return this->at(idx).read(addr, rdata);");
+		writeStmt(hppBw, 0, "    }");
 		writeStmt(hppBw, 0, "#ifdef ORDT_PIO_VERBOSE");
-		writeStmt(hppBw, 0, "   std::cout << \"--> read to invalid address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
+		writeStmt(hppBw, 0, "    std::cout << \"--> read to invalid address 0x\" << std::hex << addr << \" in arrayed regset \" << this->m_name << \"\\n\";" );
 		writeStmt(hppBw, 0, "#endif");
-		writeStmt(hppBw, 0, "   rdata.clear();");
-		writeStmt(hppBw, 0, "   return 8;" );
+		writeStmt(hppBw, 0, "    rdata.clear();");
+		writeStmt(hppBw, 0, "    return 8;" );
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 	}
