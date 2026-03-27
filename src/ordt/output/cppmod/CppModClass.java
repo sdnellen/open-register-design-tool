@@ -4,8 +4,6 @@
 package ordt.output.cppmod;
 
 import ordt.output.common.MsgUtils;
-import drvmod.cpp.CppBaseModClass.CppMethod;
-import drvmod.cpp.CppBaseModClass.Vis;
 import ordt.extract.RegNumber;
 import ordt.extract.RegNumber.NumBase;
 import ordt.extract.RegNumber.NumFormat;
@@ -21,30 +19,32 @@ public class CppModClass extends CppBaseModClass {
    // --------------------------- cpp model structure methods -----------------------------
    
    /** create a design-specific ordt_regset class */
-   public static CppModClass createRegset(String className) {
+   private static CppModClass createRegset(String className, boolean isRoot) {
 	   CppModClass newClass = new CppModClass(className);
 	   newClass.addParent("ordt_regset");
 	   CppMethod nMethod;
 	   // constructors
+	   if (isRoot) {
+		   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "()");  // dont pass start/end into root constructor
+		   newClass.tagMethod("root constructor", nMethod);  // tag this method so we can update		   
+	   }
 	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string &_m_name)");
 	   nMethod.addInitCall("ordt_regset(_m_startaddress, _m_endaddress, _m_name)");
+	   // override the child ptr update function
+	   nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void update_child_ptrs()");   
+	   nMethod.addStatement("m_children.clear();");
+	   newClass.tagMethod("update_child_ptrs", nMethod);
 	   return newClass;
    }
-  
+
+   /** create a design-specific ordt_regset child class */
+   public static CppModClass createRegset(String className) {
+	   return createRegset(className, false);
+   }
+   
    /** create a design-specific root level ordt_regset class */
    public static CppModClass createRootRegset(String className) {
-	   CppModClass newClass = new CppModClass(className);
-	   newClass.addParent("ordt_regset");
-	   newClass.addDefine(Vis.PROTECTED, "std::vector<std::reference_wrapper<ordt_model_baselistener>> listeners");
-	   CppMethod nMethod;
-	   // constructors
-	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "()");  // dont pass start/end into root constructor
-	   newClass.tagMethod("root constructor", nMethod);  // tag this method so we can update		   
-	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string &_m_name)");
-	   nMethod.addInitCall("ordt_regset(_m_startaddress, _m_endaddress, _m_name)");
-	   nMethod = newClass.addMethod(Vis.PUBLIC, "void register_listener(ordt_model_baselistener& listener)");  
-	   nMethod.addStatement("listeners.push_back(std::ref(listener));");
-	   return newClass;
+	   return createRegset(className, true);
    }
 
    /** update root level class info 
@@ -68,7 +68,7 @@ public class CppModClass extends CppBaseModClass {
 	   RegNumber endOffset = new RegNumber(startOffset);
 	   endOffset.add(byteSize);
 	   endOffset.subtract(1);
-	   //CppMethod ptrUpdateMethod = this.getTaggedMethod("update_child_ptrs"); 
+	   CppMethod ptrUpdateMethod = this.getTaggedMethod("update_child_ptrs"); 
 	   // if a replicated regset use ordt_regset_array class
 	   if (reps>1) {
 		   // create child define 
@@ -88,7 +88,7 @@ public class CppModClass extends CppBaseModClass {
 	   }
 	   // add to the ordered child list in both constructor and update method 
 	   this.addConstructorStatement("m_children.push_back(std::ref(" + instName + "));");  // push ptr of child onto vector 
-	   //ptrUpdateMethod.addStatement("m_children.push_back(std::ref(" + instName + "));");  // push ptr of child onto vector TODO - remove once all vectors cleaned up
+	   ptrUpdateMethod.addStatement("m_children.push_back(std::ref(" + instName + "));");  // push ptr of child onto vector TODO - remove once all vectors cleaned up
    }
 
    /** create a design-specific ordt_reg child class */
@@ -165,8 +165,8 @@ public class CppModClass extends CppBaseModClass {
 		String fieldType;  
 		//fieldType = "uint64_t";
 		//
-		//if (width <= 8) fieldType = "uint_fast8_t";
-		if (width <= 32) fieldType = "uint32_t";
+		if (width <= 8) fieldType = "uint_fast8_t";
+		else if (width <= 32) fieldType = "uint32_t";
 		//else fieldType = "uint64_t";
 		//
 		else if (width <= 64) fieldType = "uint64_t";
@@ -182,7 +182,7 @@ public class CppModClass extends CppBaseModClass {
 		else if (((resetVal == null) || !resetVal.isDefined())) initStr = "0"; // default to reset value of 0
 		else initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address); // else if a base type initialize with hex string
 		// add fhe field init call with reset value and r/w modes
-		this.addInitCall(instName + "(*this, " + lowIndex + ", " + width + ", " + initStr + ", " + rMode + ", " + wMode + ")");		   
+		this.addInitCall(instName + "(" + lowIndex + ", " + width + ", " + initStr + ", " + rMode + ", " + wMode + ")");		   
 
 	   // add field read/write calls in reg read method
 	   CppMethod read = this.getTaggedMethod("read");
