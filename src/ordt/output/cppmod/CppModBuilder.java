@@ -286,6 +286,13 @@ public class CppModBuilder extends OutputBuilder {
     		writeStmt(hppBw, 0, "enum ordt_read_mode_t : uint8_t {r_none, r_std, r_clr};");
     		writeStmt(hppBw, 0, "enum ordt_write_mode_t : uint8_t {w_none, w_std, w_1clr, w_1set};");
 
+			// define model listener phases
+			writeStmt(hppBw, 0, "enum ordt_eval_phase_t : uint8_t {PRE_TRANSACTION, POST_TRANSACTION};");
+    		writeStmt(hppBw, 0, "");
+
+			// foward declare model_root class for use in listener base class
+			writeStmt(hppBw, 0, "class ordt_root;");
+
     		// write the model classes
     		writeClasses();
     		
@@ -301,6 +308,7 @@ public class CppModBuilder extends OutputBuilder {
 	/** write model classes */
 	private void writeClasses() {
 		// write base classes
+		writeOrdtModelBaseListenerClass();
 		writeOrdtAddrElemClass();
 		writeOrdtRegsetClass();
 		writeOrdtAddrElemArrayClass();
@@ -319,7 +327,17 @@ public class CppModBuilder extends OutputBuilder {
 		}	
 	}
 
-
+	/** create and write the ordt_model_base_listener class */
+	private void writeOrdtModelBaseListenerClass() {
+		String className = "ordt_model_base_listener";
+		CppModClass newClass = new CppModClass(className);
+		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(ordt_root& _model_root)");  
+		nMethod.addInitCall("model_root(_model_root)");
+		newClass.addDefine(Vis.PROTECTED, "ordt_root& model_root");
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_model_base_listener() = default");
+		newClass.addMethod(Vis.PUBLIC, "virtual void evaluate(ordt_eval_phase phase) = 0");
+	}
+		
 	/** create and write OrdtAddrElem class  */
 	private void writeOrdtAddrElemClass() {
 		String className = "ordt_addr_elem";
@@ -493,6 +511,11 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod.addInitCall("m_mutex()");  
 		// methods
 		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_reg() = default");
+		// mutex control methods
+		nMethod = newClass.addMethod(Vis.PUBLIC, "void lock()");
+		nMethod.addStatement("m_mutex.lock();");
+		nMethod = newClass.addMethod(Vis.PUBLIC, "void unlock()");
+		nMethod.addStatement("m_mutex.unlock();");
 		// write methods
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void write(const ordt_data &wdata)");  // will be overriden by child classes
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");
@@ -512,60 +535,71 @@ public class CppModBuilder extends OutputBuilder {
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "class ordt_field {");
+		writeStmt(hppBw, 0, "  protected:");
+		writeStmt(hppBw, 0, "    ordt_reg& parent;");
 		writeStmt(hppBw, 0, "  public:");
 		writeStmt(hppBw, 0, "    int lobit, size;");
 		writeStmt(hppBw, 0, "    T data;");
 		//writeStmt(hppBw, 0, "    std::atomic<T> data;");  // wrap data in atomic
 		writeStmt(hppBw, 0, "    ordt_read_mode_t r_mode;");
 		writeStmt(hppBw, 0, "    ordt_write_mode_t w_mode;");
-		writeStmt(hppBw, 0, "    ordt_field(int _lobit, int _size, int _vsize, uint32_t _data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode);"); // special case for wide fields
-		writeStmt(hppBw, 0, "    ordt_field(int _lobit, int _size, T _init_data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode);");
+		writeStmt(hppBw, 0, "    ordt_field(ordt_reg& parent, int _lobit, int _size, int _vsize, uint32_t _data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode);"); // special case for wide fields
+		writeStmt(hppBw, 0, "    ordt_field(ordt_reg& parent, int _lobit, int _size, T _init_data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode);");
 		// read/write 
 		writeStmt(hppBw, 0, "    void write(const ordt_data &wdata);");
 		writeStmt(hppBw, 0, "    void read(ordt_data &rdata);");
-		// clear 
-		//writeStmt(hppBw, 0, "    void clear(ordt_data &data);");
-		writeStmt(hppBw, 0, "    void clear();");
+		// data get, set, clear methods
+		writeStmt(hppBw, 0, "    T get() const { return data; }");
+		writeStmt(hppBw, 0, "    void set(const T &fld_val) { data = fld_val; }");
+		writeStmt(hppBw, 0, "    void clear() { data = 0; }");
+		writeStmt(hppBw, 0, "    void lock_and_set(const T &fld_val);");
+		writeStmt(hppBw, 0, "    void lock_and_clear();");
 		writeStmt(hppBw, 0, "};");
 		// constructors
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
-		writeStmt(hppBw, 0, "ordt_field<T>::ordt_field(int _lobit, int _size, int _vsize, uint32_t _data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode)");
-		writeStmt(hppBw, 0, "   : lobit(_lobit), size(_size), data(_vsize, _data), r_mode(_r_mode), w_mode(_w_mode) {");
+		writeStmt(hppBw, 0, "ordt_field<T>::ordt_field(ordt_reg& _parent, int _lobit, int _size, int _vsize, uint32_t _data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode)");
+		writeStmt(hppBw, 0, "   : parent(_parent), lobit(_lobit), size(_size), data(_vsize, _data), r_mode(_r_mode), w_mode(_w_mode) {");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
-		writeStmt(hppBw, 0, "ordt_field<T>::ordt_field(int _lobit, int _size, T _init_data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode)");
-		writeStmt(hppBw, 0, "   : lobit(_lobit), size(_size), data(_init_data), r_mode(_r_mode), w_mode(_w_mode) {");
+		writeStmt(hppBw, 0, "ordt_field<T>::ordt_field(ordt_reg& _parent, int _lobit, int _size, T _init_data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode)");
+		writeStmt(hppBw, 0, "   : parent(_parent), lobit(_lobit), size(_size), data(_init_data), r_mode(_r_mode), w_mode(_w_mode) {");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 		// read/write
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "void ordt_field<T>::write(const ordt_data &wdata) {");
 		//writeStmt(hppBw, 0, "   std::cout << \"field write: \" << \", mode=\" << w_mode << \"\\n\";");
-		writeStmt(hppBw, 0, "   if (w_mode == w_std) wdata.get_slice(lobit, size, data);");
-		writeStmt(hppBw, 0, "   else if (w_mode == w_1set) {");
-		writeStmt(hppBw, 0, "      T mask_data;");
-		writeStmt(hppBw, 0, "      wdata.get_slice(lobit, size, mask_data);");
-		writeStmt(hppBw, 0, "      data = data | mask_data;");
-		writeStmt(hppBw, 0, "   }");
-		writeStmt(hppBw, 0, "   else if (w_mode == w_1clr) {");
-		writeStmt(hppBw, 0, "      T mask_data;");
-		writeStmt(hppBw, 0, "      wdata.get_slice(lobit, size, mask_data);");
-		writeStmt(hppBw, 0, "      data = data & ~mask_data;");
-		writeStmt(hppBw, 0, "   }");
+		writeStmt(hppBw, 0, "    if (w_mode == w_std) wdata.get_slice(lobit, size, data);");
+		writeStmt(hppBw, 0, "    else if (w_mode == w_1set) {");
+		writeStmt(hppBw, 0, "        T mask_data;");
+		writeStmt(hppBw, 0, "        wdata.get_slice(lobit, size, mask_data);");
+		writeStmt(hppBw, 0, "        data = data | mask_data;");
+		writeStmt(hppBw, 0, "    }");
+		writeStmt(hppBw, 0, "    else if (w_mode == w_1clr) {");
+		writeStmt(hppBw, 0, "        T mask_data;");
+		writeStmt(hppBw, 0, "        wdata.get_slice(lobit, size, mask_data);");
+		writeStmt(hppBw, 0, "        data = data & ~mask_data;");
+		writeStmt(hppBw, 0, "    }");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "void ordt_field<T>::read(ordt_data &rdata) {");
 		//writeStmt(hppBw, 0, "   std::cout << \"field read: \" << \"\\n\";");
-		writeStmt(hppBw, 0, "   rdata.set_slice(lobit, size, data);");
-		writeStmt(hppBw, 0, "   if (r_mode == r_clr) clear();");
+		writeStmt(hppBw, 0, "    rdata.set_slice(lobit, size, data);");
+		writeStmt(hppBw, 0, "    if (r_mode == r_clr) clear();");
 		writeStmt(hppBw, 0, "}");
-		// clear 
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
-		writeStmt(hppBw, 0, "void ordt_field<T>::clear() {");
+		writeStmt(hppBw, 0, "void ordt_field<T>::lock_and_set(const T &fld_val) {");
+		writeStmt(hppBw, 0, "    std::lock_guard<std::mutex> lock(parent.m_mutex);");
+		writeStmt(hppBw, 0, "    data = fld_val;");
+		writeStmt(hppBw, 0, "}");
+		writeStmt(hppBw, 0, "");
+		writeStmt(hppBw, 0, "template<typename T>");
+		writeStmt(hppBw, 0, "void ordt_field<T>::lock_and_clear() {");
+		writeStmt(hppBw, 0, "    std::lock_guard<std::mutex> lock(parent.m_mutex);");
 		writeStmt(hppBw, 0, "    data = 0;");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
