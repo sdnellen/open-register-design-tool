@@ -335,7 +335,10 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod.addInitCall("model_root(_model_root)");
 		newClass.addDefine(Vis.PROTECTED, "ordt_root& model_root");
 		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_model_base_listener() = default");
-		newClass.addMethod(Vis.PUBLIC, "virtual void evaluate(ordt_eval_phase phase) = 0");
+		newClass.addMethod(Vis.PUBLIC, "pure virtual void evaluate(ordt_eval_phase_t phase_t)"); // FIXME - not handling pure
+		// write class
+		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
+		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
 	}
 		
 	/** create and write OrdtAddrElem class  */
@@ -366,7 +369,6 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod = newClass.addMethod(Vis.PUBLIC, "bool hasStartAddress(const uint64_t &addr)");
 		//nMethod.addStatement("std::cout << \"ordt_addr_elem hasStartAddress: addr=\"<< addr << \" start=\" << m_startaddress << \" end=\" << m_endaddress << \"\\n\";");
 		nMethod.addStatement("return (addr == m_startaddress);");
-		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void update_child_ptrs()");  // empty placeholder defined in design-specific regset classes - called after elem copy in jdrl_addr_elem_array to fix pointers  
 		// write class
 		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
 		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
@@ -454,7 +456,6 @@ public class CppModBuilder extends OutputBuilder {
 		writeStmt(hppBw, 0, "    for(int idx=0; idx<_reps; idx++) {");
 		writeStmt(hppBw, 0, "        std::string new_name = _m_name + \"[\" + std::to_string(idx) + \"]\";");	
 		writeStmt(hppBw, 0, "        this->emplace_back(el_startaddress, el_endaddress, new_name);"); // changed to emplace to avoid copy with push_back
-		writeStmt(hppBw, 0, "        this->back().update_child_ptrs();");  // update ptrs
 		writeStmt(hppBw, 0, "        el_startaddress += _m_stride;");
 		writeStmt(hppBw, 0, "        el_endaddress += _m_stride;");
 		writeStmt(hppBw, 0, "    }");

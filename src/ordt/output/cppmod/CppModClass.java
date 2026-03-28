@@ -33,14 +33,14 @@ public class CppModClass extends CppBaseModClass {
    public static CppModClass createRootRegset(String className) {
 	   CppModClass newClass = new CppModClass(className);
 	   newClass.addParent("ordt_regset");
-	   newClass.addDefine(Vis.PROTECTED, "std::vector<std::reference_wrapper<ordt_model_baselistener>> listeners");
+	   newClass.addDefine(Vis.PROTECTED, "std::vector<std::reference_wrapper<ordt_model_base_listener>> listeners");
 	   CppMethod nMethod;
 	   // constructors
 	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "()");  // dont pass start/end into root constructor
 	   newClass.tagMethod("root constructor", nMethod);  // tag this method so we can update		   
 	   nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string &_m_name)");
 	   nMethod.addInitCall("ordt_regset(_m_startaddress, _m_endaddress, _m_name)");
-	   nMethod = newClass.addMethod(Vis.PUBLIC, "void register_listener(ordt_model_baselistener& listener)");  
+	   nMethod = newClass.addMethod(Vis.PUBLIC, "void register_listener(ordt_model_base_listener& listener)");  
 	   nMethod.addStatement("listeners.push_back(std::ref(listener));");
 	   return newClass;
    }
@@ -66,7 +66,6 @@ public class CppModClass extends CppBaseModClass {
 	   RegNumber endOffset = new RegNumber(startOffset);
 	   endOffset.add(byteSize);
 	   endOffset.subtract(1);
-	   CppMethod ptrUpdateMethod = this.getTaggedMethod("update_child_ptrs"); 
 	   // if a replicated regset use ordt_regset_array class
 	   if (reps>1) {
 		   // create child define 
@@ -86,7 +85,6 @@ public class CppModClass extends CppBaseModClass {
 	   }
 	   // add to the ordered child list in both constructor and update method 
 	   this.addConstructorStatement("m_children.push_back(std::ref(" + instName + "));");  // push ptr of child onto vector 
-	   ptrUpdateMethod.addStatement("m_children.push_back(std::ref(" + instName + "));");  // push ptr of child onto vector TODO - remove once all vectors cleaned up
    }
 
    /** create a design-specific ordt_reg child class */
