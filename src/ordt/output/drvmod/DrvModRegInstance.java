@@ -92,10 +92,11 @@ public class DrvModRegInstance extends DrvModBaseInstance {
 				return false;
 			boolean thisResetDefined = (reset != null) && reset.isDefined();
 			boolean otherResetDefined = (other.reset != null) && other.reset.isDefined();
-			if (!thisResetDefined) {
-				if (otherResetDefined)
-					return false;
-			} else if (!otherResetDefined || !reset.getValue().equals(other.reset.getValue()))
+			if (!thisResetDefined && otherResetDefined)
+				return false;
+			else if (thisResetDefined && !otherResetDefined)
+				return false;
+			else if (thisResetDefined && otherResetDefined && !reset.getValue().equals(other.reset.getValue()))
 				return false;
 			return true;
 		}
