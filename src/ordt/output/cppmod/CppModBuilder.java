@@ -290,8 +290,8 @@ public class CppModBuilder extends OutputBuilder {
 			writeStmt(hppBw, 0, "enum ordt_eval_phase_t : uint8_t {PRE_TRANSACTION, POST_TRANSACTION};");
     		writeStmt(hppBw, 0, "");
 
-			// foward declare model_root class for use in listener base class
-			writeStmt(hppBw, 0, "class ordt_root;");
+			// foward declare ordt_base_model_listener class for use in ordt_regset base class
+			writeStmt(hppBw, 0, "class ordt_model_base_listener;");
 
     		// write the model classes
     		writeClasses();
@@ -308,9 +308,9 @@ public class CppModBuilder extends OutputBuilder {
 	/** write model classes */
 	private void writeClasses() {
 		// write base classes
-		writeOrdtModelBaseListenerClass();
 		writeOrdtAddrElemClass();
 		writeOrdtRegsetClass();
+		writeOrdtModelBaseListenerClass();
 		writeOrdtAddrElemArrayClass();
 		writeOrdtRegClass();
 		writeOrdtFieldClass();  
@@ -325,20 +325,6 @@ public class CppModBuilder extends OutputBuilder {
 			writeStmts(hppBw, mClass.genHeader(false)); // header with no include guards
 			writeStmts(cppBw, mClass.genMethods(true));  // methods with namespace			
 		}	
-	}
-
-	/** create and write the ordt_model_base_listener class */
-	private void writeOrdtModelBaseListenerClass() {
-		String className = "ordt_model_base_listener";
-		CppModClass newClass = new CppModClass(className);
-		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(ordt_root& _model_root)");  
-		nMethod.addInitCall("model_root(_model_root)");
-		newClass.addDefine(Vis.PROTECTED, "ordt_root& model_root");
-		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_model_base_listener() = default");
-		newClass.addMethod(Vis.PUBLIC, "pure virtual void evaluate(ordt_eval_phase_t phase_t)"); // FIXME - not handling pure
-		// write class
-		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
-		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
 	}
 		
 	/** create and write OrdtAddrElem class  */
@@ -381,6 +367,7 @@ public class CppModBuilder extends OutputBuilder {
 		newClass.addParent("ordt_addr_elem");
 		newClass.addDefine(Vis.PROTECTED, "std::vector<std::reference_wrapper<ordt_addr_elem>>  m_children");
 		newClass.addDefine(Vis.PRIVATE, "ordt_addr_elem* childElem");  
+	   	newClass.addDefine(Vis.PROTECTED, "std::vector<std::reference_wrapper<ordt_model_base_listener>> listeners");
 		// constructors
 		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(uint64_t _m_startaddress, uint64_t _m_endaddress, const std::string& _m_name)");  
 		nMethod.addInitCall("ordt_addr_elem(_m_startaddress, _m_endaddress, _m_name)");
@@ -396,36 +383,67 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod.addStatement("return nullptr;");
 	
 		// methods
-		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_regset() = default");
+	   	nMethod = newClass.addMethod(Vis.PUBLIC, "void add_listener(ordt_model_base_listener& listener)");  
+	   	nMethod.addStatement("listeners.push_back(std::ref(listener));");
+		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void notify_listeners(ordt_eval_phase_t phase_t)");
+		nMethod.addStatement("for (auto& listener_ref : listeners) {");
+		nMethod.addStatement("    ordt_model_base_listener& listener = listener_ref.get();");
+		nMethod.addStatement("    listener.notify(phase_t);");
+		nMethod.addStatement("}");
+	   	newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_regset() = default");
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");  
 		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
-		nMethod.addStatement("   std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \", data=\" << wdata.to_string() << \", start address=0x\" << std::hex << this->m_startaddress << \", end address=0x\" << std::hex << this->m_endaddress << \", offset=0x\" << std::hex << (addr - this->m_startaddress) << \"\\n\";" );
+		nMethod.addStatement("    std::cout << \"--> initiating write to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \", data=\" << wdata.to_string() << \", start address=0x\" << std::hex << this->m_startaddress << \", end address=0x\" << std::hex << this->m_endaddress << \", offset=0x\" << std::hex << (addr - this->m_startaddress) << \"\\n\";" );
 		nMethod.addStatement("#endif");
-		nMethod.addStatement("   if (this->containsAddress(addr)) {");
-		nMethod.addStatement("      childElem = this->findAddrElem(addr);");
-		nMethod.addStatement("      if (childElem != nullptr) { return childElem->write(addr, wdata); }");
-		nMethod.addStatement("   }");
+		nMethod.addStatement("    if (this->containsAddress(addr)) {");
+		nMethod.addStatement("        childElem = this->findAddrElem(addr);");
+		nMethod.addStatement("        if (childElem != nullptr) {");
+		nMethod.addStatement("            notify_listeners(PRE_TRANSACTION);");
+		nMethod.addStatement("            int ret = childElem->write(addr, wdata);");
+		nMethod.addStatement("            notify_listeners(POST_TRANSACTION);");
+		nMethod.addStatement("            return ret;");
+		nMethod.addStatement("        }");
+		nMethod.addStatement("    }");
 		nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-		nMethod.addStatement("   std::cout << \"--> write to invalid address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("    std::cout << \"--> write to invalid address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
 		nMethod.addStatement("#endif");
-		nMethod.addStatement("   return 8;" );
+		nMethod.addStatement("    return 8;" );
 		
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int read(const uint64_t &addr, ordt_data &rdata)");  
 		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
-		nMethod.addStatement("   std::cout << \"--> initiating read to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \", start address=0x\" << std::hex << this->m_startaddress << \", end address=0x\" << std::hex << this->m_endaddress << \", offset=0x\" << std::hex << (addr - this->m_startaddress) << \"\\n\";" );
+		nMethod.addStatement("    std::cout << \"--> initiating read to address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \", start address=0x\" << std::hex << this->m_startaddress << \", end address=0x\" << std::hex << this->m_endaddress << \", offset=0x\" << std::hex << (addr - this->m_startaddress) << \"\\n\";" );
 		nMethod.addStatement("#endif");
-		nMethod.addStatement("   if (this->containsAddress(addr)) {");
+		nMethod.addStatement("    if (this->containsAddress(addr)) {");
 		//nMethod.addStatement("      std::cout << \"regset read: ordt_regset contains addr=\"<< addr << \"\\n\";");
-		nMethod.addStatement("      childElem = this->findAddrElem(addr);");
-		nMethod.addStatement("      if (childElem != nullptr) { return childElem->read(addr, rdata); }");
+		nMethod.addStatement("        childElem = this->findAddrElem(addr);");
+		nMethod.addStatement("        if (childElem != nullptr) {");
+		nMethod.addStatement("            notify_listeners(PRE_TRANSACTION);");
+		nMethod.addStatement("            int ret = childElem->read(addr, rdata);");
+		nMethod.addStatement("            notify_listeners(POST_TRANSACTION);");
+		nMethod.addStatement("            return ret;");
+		nMethod.addStatement("        }");
 		//nMethod.addStatement("      else std::cout << \"read: findAddrElem returned nullptr, addr=\"<< addr << \"\\n\";" );
-		nMethod.addStatement("   }");
+		nMethod.addStatement("    }");
 		nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-		nMethod.addStatement("   std::cout << \"--> read to invalid address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("    std::cout << \"--> read to invalid address 0x\" << std::hex << addr << \" in regset \" << this->m_name << \"\\n\";" );
 		nMethod.addStatement("#endif");
-		nMethod.addStatement("   rdata.clear();");
-		nMethod.addStatement("   return 8;" );
+		nMethod.addStatement("    rdata.clear();");
+		nMethod.addStatement("    return 8;" );
         
+		// write class
+		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
+		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
+	}
+
+	/** create and write the ordt_model_base_listener class */
+	private void writeOrdtModelBaseListenerClass() {
+		String className = "ordt_model_base_listener";
+		CppModClass newClass = new CppModClass(className);
+		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(ordt_regset& _regset)");  
+		nMethod.addInitCall("regset(_regset)");
+		newClass.addDefine(Vis.PROTECTED, "ordt_regset& regset");
+		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_model_base_listener() = default");
+		newClass.addMethod(Vis.PUBLIC, "pure virtual void notify(ordt_eval_phase_t phase_t)");
 		// write class
 		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
 		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
