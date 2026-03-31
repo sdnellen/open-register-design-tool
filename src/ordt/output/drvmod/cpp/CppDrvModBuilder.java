@@ -254,6 +254,8 @@ public class CppDrvModBuilder extends DrvModBuilder {  // Note no OutputBuilder 
 		// constructors
 		CppMethod nMethod = newClass.addConstructor(Vis.PUBLIC, className + "(std::string _m_name)");  
 		nMethod.addInitCall("m_name(_m_name)");  // relative name of instance
+		//destructor
+		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_drv_element() = default");
 		// -- get_address methods
 		nMethod = newClass.addMethod(Vis.PUBLIC, "pure virtual int get_address_using_list(const int version, std::list<ordt_drv_path_element> &path, const bool bypass_names, uint64_t &address, std::list<ordt_drv_field> &fields)"); 
 		//
