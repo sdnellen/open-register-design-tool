@@ -309,7 +309,7 @@ public class CppBaseModClass {
 		nMethod.addStatement("int data_size = this->size() * 32;");
 		//nMethod.addStatement("std::cout << \"get_slice: -------------------, lo bit=\" << lobit << \", size=\" << size << \", slice_out=\" << slice_out << \", sizeof(T)=\" << sizeof(T) << \"\\n\";");
 		nMethod.addStatement("if ((lobit % 32) > 0) {");
-		nMethod.addStatement("  std::cout << \"ERROR set_slice: non 32b aligned large fields are not supported\" << \"\\n\";");
+		nMethod.addStatement("  std::cout << \"ERROR get_slice: non 32b aligned large fields are not supported\" << \"\\n\";");
 		nMethod.addStatement("  return;");
 		nMethod.addStatement("}");
 		nMethod.addStatement("slice_out.clear();"); 
@@ -317,7 +317,7 @@ public class CppBaseModClass {
 		nMethod.addStatement("int loword = lobit / 32;"); 
 		nMethod.addStatement("int hiword = hibit / 32;"); 
 		nMethod.addStatement("if (hibit > data_size - 1) {");
-		nMethod.addStatement("  std::cout << \"ERROR set_slice: specified slice is not contained in data\" << \"\\n\";");
+		nMethod.addStatement("  std::cout << \"ERROR get_slice: specified slice is not contained in data\" << \"\\n\";");
 		nMethod.addStatement("  return;");
 		nMethod.addStatement("}");
 		nMethod.addStatement("slice_out.resize(hiword - loword + 1); // Resize slice_out before using at()");
@@ -350,7 +350,7 @@ public class CppBaseModClass {
 		nMethod.addStatement("int loword = lobit / 32;"); 
 		nMethod.addStatement("int hiword = hibit / 32;"); 
 		nMethod.addStatement("if (hibit > data_size - 1) {");
-		nMethod.addStatement("  std::cout << \"ERROR set_slice: specified slice is not contained in data\" << \"\\n\";");
+		nMethod.addStatement("  std::cout << \"ERROR get_slice: specified slice is not contained in data\" << \"\\n\";");
 		nMethod.addStatement("  return;");
 		nMethod.addStatement("}");
 		nMethod.addStatement("int ret_lshift=0;");
@@ -369,6 +369,13 @@ public class CppBaseModClass {
 		nMethod.addStatement("}");
 		nMethod.addStatement("return;");
 		
+		// get_slice method that returns type T
+		nMethod = newClass.addTemplateMethod(Vis.PUBLIC, "T get_slice(int lobit, int size) const");
+		nMethod.addStatement("T slice_out;");
+		nMethod.addStatement("get_slice(lobit, size, slice_out);");
+		nMethod.addStatement("return slice_out;");
+
+		//nMethod.addStatement("std::cout << \"get_slice
 		// to_string method
 		nMethod = newClass.addMethod(Vis.PUBLIC, "std::string to_string() const");
 		nMethod.addStatement("std::stringstream ss;");

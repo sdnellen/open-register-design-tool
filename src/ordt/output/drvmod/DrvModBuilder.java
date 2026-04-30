@@ -122,7 +122,7 @@ public abstract class DrvModBuilder extends OutputBuilder {
         	uniqueRegSets.put(newRegSet, newRegSet);
         	uniqueInstances++;
     		// unique, so add this regset to its parent
-    		if (!currentRegSetStack.isEmpty()) currentRegSetStack.peek().addChild(newRegSet, relativeAddr, regSetProperties.getRepCount(), regSetProperties.getAlignedSize().toLong(), overlayCount); 
+    		if (!currentRegSetStack.isEmpty()) currentRegSetStack.peek().addChild(newRegSet, relativeAddr, regSetProperties.getRepCount(), regSetProperties.getExtractInstance().getAddressIncrement().toLong(), overlayCount); // was using regSetProperties.getAlignedSize() for stride
         }
 		// otherwise add newRegSet instance as a duplicate
 		else { 
@@ -132,7 +132,7 @@ public abstract class DrvModBuilder extends OutputBuilder {
 				uniqueRegSets.get(newRegSet).updateChild(cInfo, overlayCount, false);  // no adds are allowed here
 			}
 			// if a dup, bump map encoding in parent's child list
-    		if (!currentRegSetStack.isEmpty()) currentRegSetStack.peek().addChild(uniqueRegSets.get(newRegSet), relativeAddr, regSetProperties.getRepCount(), regSetProperties.getAlignedSize().toLong(), overlayCount); 
+    		if (!currentRegSetStack.isEmpty()) currentRegSetStack.peek().addChild(uniqueRegSets.get(newRegSet), relativeAddr, regSetProperties.getRepCount(), regSetProperties.getExtractInstance().getAddressIncrement().toLong(), overlayCount); // was using regSetProperties.getAlignedSize() for stride
 	    	//	System.out.println("DrvModBuilder finishRegSet: duplicate id=" + regSetProperties.getId() + ", reps=" + regSetProperties.getRepCount() + ", base=" + regSetProperties.getFullBaseAddress() + ", high=" + regSetProperties.getFullHighAddress() + ", stride=" + regSetProperties.getExtractInstance().getAddressIncrement());
 		}
 		if (regSetProperties.isRootInstance())  

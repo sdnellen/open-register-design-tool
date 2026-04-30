@@ -57,7 +57,7 @@ public class DrvModRegSetInstance extends DrvModBaseInstance {
 	 * @param allowAdd - if true then adds to the child list are allowed, otherwise only map updates are allowed
 	 */
 	public void updateChild(DrvModBaseInstance child, long addressOffset, int reps, Long addressStride, int mapId, boolean allowAdd) {
-		//if ("tdm_table".equals(child.getName())) System.out.println("DrvModRegSetInstance updateChild: adding new child, child.getName=" + child.getName() + ", mapId=" + mapId + ", allowAdd=" + allowAdd + ", offset=" + addressOffset + ", reps=" + reps + ", stride=" + addressStride+ ", hash=" + child.hashCode());
+		//if ("pg1600_quadmac".equals(child.getName())) System.out.println("DrvModRegSetInstance updateChild: adding new child, child.getName=" + child.getName() + ", mapId=" + mapId + ", allowAdd=" + allowAdd + ", offset=" + addressOffset + ", reps=" + reps + ", stride=" + addressStride+ ", hash=" + child.hashCode());
 		DrvModRegSetChildInfo newChildInfo = new DrvModRegSetChildInfo(child, addressOffset, reps, addressStride);
 		updateChild(newChildInfo, mapId, allowAdd);
 	}

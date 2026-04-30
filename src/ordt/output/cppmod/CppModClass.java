@@ -95,7 +95,7 @@ public class CppModClass extends CppBaseModClass {
 	   // overload write methods
 	   nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int write(const uint64_t &addr, const ordt_data &wdata)");
 	   nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-	   nMethod.addStatement("   std::cout << \"--> write of reg " + className + " at addr=0x\"<< addr << \", data=\" << wdata.to_string() << \"\\n\";");
+	   nMethod.addStatement("   std::cout << \"--> write of reg " + className + " at addr=0x\"<< std::hex << addr << \", data=\" << wdata.to_string() << \"\\n\";");
 	   nMethod.addStatement("#endif");
 	   nMethod.addStatement("   if (this->hasStartAddress(addr)) {");
 	   nMethod.addStatement("      this->write(wdata);");
@@ -113,7 +113,7 @@ public class CppModClass extends CppBaseModClass {
 	   // overload read methods
 	   nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int read(const uint64_t &addr, ordt_data &rdata)");  
 	   nMethod.addStatement("#ifdef ORDT_PIO_VERBOSE");
-	   nMethod.addStatement("   std::cout << \"--> read of reg " + className + " at addr=0x\"<< addr << \"\\n\";");
+	   nMethod.addStatement("   std::cout << \"--> read of reg " + className + " at addr=0x\" << std::hex << addr << \"\\n\";");
 	   nMethod.addStatement("#endif");
 	   nMethod.addStatement("   if (this->hasStartAddress(addr)) {");
 	   nMethod.addStatement("      this->read(rdata);");
