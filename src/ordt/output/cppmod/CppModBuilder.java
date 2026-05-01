@@ -126,9 +126,10 @@ public class CppModBuilder extends OutputBuilder {
 		else if (currentModClass.hasChildren()) {  // only add regset if it contains some regs
 		    modClasses.add(currentModClass);
 			activeModClasses.peek().addChildRegsetInfo(getCppRegsetClassName(), regSetProperties.getId(), 
-					regSetProperties.getRelativeBaseAddress(), regSetProperties.getAlignedSize(), regSetProperties.getRepCount(), regSetProperties.getExtractInstance().getAddressIncrement());			
+					regSetProperties.getRelativeBaseAddress(), regSetProperties.getExtractInstance().getAddressIncrement(), regSetProperties.getRepCount(), regSetProperties.getExtractInstance().getAddressIncrement());  // byteSize was using getAlignedSize() for regset but this seem incorrect			
 		}
-		//System.out.println("CppModBuilder finishRegSet: root found, ipath=" + regSetProperties.getBaseName() + ", id=" + regSetProperties.getId() + ", base=" + regSetProperties.getFullBaseAddress() + ", high=" + regSetProperties.getFullHighAddress());
+		//if (regSetProperties.getId().equals("cfgs"))
+		//	System.out.println("CppModBuilder finishRegSet: cfgs found, ipath=" + regSetProperties.getBaseName() + ", id=" + regSetProperties.getId() + ", base=" + regSetProperties.getFullBaseAddress() + ", high=" + regSetProperties.getFullHighAddress() + ", stride=" + regSetProperties.getExtractInstance().getAddressIncrement() + ", alignedSize=" + regSetProperties.getAlignedSize());
 	}
 
 	/** process root address map */
