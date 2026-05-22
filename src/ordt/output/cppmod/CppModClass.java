@@ -168,12 +168,11 @@ public class CppModClass extends CppBaseModClass {
 		this.addDefine(Vis.PUBLIC, "ordt_field<" + fieldType + "> " + instName); 
 		// set field init value
 		String initStr = "";
-		if ("ordt_data".equals(fieldType)) { 
-			if (((resetVal == null) || !resetVal.isDefined())) initStr = "1, 0"; // default to single word reset value of 0 (use constructor that takes vector size and default value)
-			else initStr = resetVal.toDisplayString(",", "{ ", " }"); // create a vector initialization string of c++ ordt_data from resetVal
-		}
-		else if (((resetVal == null) || !resetVal.isDefined())) initStr = "0"; // default to reset value of 0
-		else initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address); // else if a base type initialize with hex string
+		if ("ordt_data".equals(fieldType))
+			initStr = resetVal.toDisplayString(",", "{ ", " }"); // create a vector initialization string of c++ ordt_data from resetVal
+		else 
+			initStr = resetVal.toFormat(NumBase.Hex, NumFormat.Address); // else if a base type initialize with hex string
+		if (((resetVal == null) || !resetVal.isDefined())) initStr = "false, " + initStr; // use constructor that takes has_reset bool
 		// add fhe field init call with reset value and r/w modes
 		this.addInitCall(instName + "(*this, " + lowIndex + ", " + width + ", " + initStr + ", " + rMode + ", " + wMode + ")");		   
 
