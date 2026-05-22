@@ -581,12 +581,12 @@ public class CppModBuilder extends OutputBuilder {
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "ordt_field<T>::ordt_field(ordt_reg& _parent, int _lobit, int _size, T _init_data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode)");
-		writeStmt(hppBw, 0, "   : parent(_parent), lobit(_lobit), size(_size), has_reset(true), data(_init_data), reset_data(_init_data), r_mode(_r_mode), w_mode(_w_mode) {");
+		writeStmt(hppBw, 0, "   : parent(_parent), lobit(_lobit), size(_size), data(_init_data), reset_data(_init_data), has_reset(true), r_mode(_r_mode), w_mode(_w_mode) {");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 		writeStmt(hppBw, 0, "template<typename T>");
 		writeStmt(hppBw, 0, "ordt_field<T>::ordt_field(ordt_reg& _parent, int _lobit, int _size, bool _has_reset, T _init_data, ordt_read_mode_t _r_mode, ordt_write_mode_t _w_mode)");
-		writeStmt(hppBw, 0, "   : parent(_parent), lobit(_lobit), size(_size), has_reset(_has_reset), data(_init_data), reset_data(_init_data), r_mode(_r_mode), w_mode(_w_mode) {");
+		writeStmt(hppBw, 0, "   : parent(_parent), lobit(_lobit), size(_size), data(_init_data), reset_data(_init_data), has_reset(_has_reset), r_mode(_r_mode), w_mode(_w_mode) {");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 		// read/write
