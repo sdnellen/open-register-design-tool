@@ -129,7 +129,12 @@ public class CppModClass extends CppBaseModClass {
 	   newClass.tagMethod("read", nMethod);  // tag this method so field info can be appended
 	   nMethod.addStatement("rdata.clear();");
 	   nMethod.addStatement("for (uint64_t widx=0; widx<((m_endaddress - m_startaddress + 1)/4); widx++) rdata.push_back(0);");
-	   return newClass;
+	   
+	   // overload reset method
+	   nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void lock_and_reset()");  
+	   newClass.tagMethod("lock_and_reset", nMethod);  // tag this method so field info can be appended
+	   nMethod.addStatement("std::lock_guard<std::mutex> m_guard(m_mutex);");  // grab reg lock
+       return newClass;
    }
 
    /** add info to reference a child reg in this c++ class  
@@ -177,11 +182,13 @@ public class CppModClass extends CppBaseModClass {
 		// add fhe field init call with reset value and r/w modes
 		this.addInitCall(instName + "(*this, " + lowIndex + ", " + width + ", " + initStr + ", " + rMode + ", " + wMode + ")");		   
 
-	   // add field read/write calls in reg read method
+	   // add field read/write/reset calls in reg read method
 	   CppMethod read = this.getTaggedMethod("read");
 	   read.addStatement(instName + ".read(rdata);");
 	   CppMethod write = this.getTaggedMethod("write");
 	   write.addStatement(instName + ".write(wdata);");
+	   CppMethod reset = this.getTaggedMethod("lock_and_reset");
+	   reset.addStatement(instName + ".reset();");
    }
 
 }

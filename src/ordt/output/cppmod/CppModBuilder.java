@@ -544,7 +544,9 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void read(ordt_data &rdata)");  // will be overriden by child classes
 		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual int read(const uint64_t &addr, ordt_data &rdata)");  
 		nMethod.addStatement("   return 0;" );
-		// write class
+		// reset method
+		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void lock_and_reset()");  // will be overriden by child classes
+	// write class
 		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
 		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
 	}
