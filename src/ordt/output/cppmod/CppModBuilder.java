@@ -343,7 +343,9 @@ public class CppModBuilder extends OutputBuilder {
 		// methods
 		newClass.addMethod(Vis.PUBLIC, "virtual ~ordt_addr_elem() = default");
 		newClass.addMethod(Vis.PUBLIC, "pure virtual int write(const uint64_t &addr, const ordt_data &wdata)");
-		newClass.addMethod(Vis.PUBLIC, "pure virtual int read(const uint64_t &addr, ordt_data &rdata)");  
+		newClass.addMethod(Vis.PUBLIC, "pure virtual int read(const uint64_t &addr, ordt_data &rdata)");
+		newClass.addMethod(Vis.PUBLIC, "pure virtual void lock_and_reset()");  
+  
 		nMethod = newClass.addMethod(Vis.PUBLIC, "bool containsAddress(const uint64_t &addr)");
 		//nMethod.addStatement("std::cout << \"ordt_addr_elem containsAddress: addr=\"<< addr << \" start=\" << m_startaddress << \" end=\" << m_endaddress << \"\\n\";");
 		nMethod.addStatement("return ((addr >= m_startaddress) && (addr <= m_endaddress));");
@@ -431,6 +433,12 @@ public class CppModBuilder extends OutputBuilder {
 		nMethod.addStatement("    rdata.clear();");
 		nMethod.addStatement("    return 8;" );
         
+		nMethod = newClass.addMethod(Vis.PUBLIC, "virtual void lock_and_reset()");  
+		nMethod.addStatement("#ifdef ORDT_PIO_TRACE");
+		nMethod.addStatement("    std::cout << \"--> initiating lock_and_reset in regset \" << this->m_name << \"\\n\";" );
+		nMethod.addStatement("#endif");
+		nMethod.addStatement("    for (auto& child : m_children) child.get().lock_and_reset();");
+
 		// write class
 		writeStmts(hppBw, newClass.genHeader(false)); // header with no include guards
 		writeStmts(cppBw, newClass.genMethods(true));  // methods with namespace
@@ -463,6 +471,8 @@ public class CppModBuilder extends OutputBuilder {
 		writeStmt(hppBw, 0, "    ordt_addr_elem_array(uint64_t _m_startaddress, uint64_t _m_endaddress, int _reps, uint64_t _m_stride, const std::string& _m_name);");
 		writeStmt(hppBw, 0, "    virtual int write(const uint64_t &addr, const ordt_data &wdata);");
 		writeStmt(hppBw, 0, "    virtual int read(const uint64_t &addr, ordt_data &rdata);");
+		writeStmt(hppBw, 0, "    virtual void lock_and_reset();");
+
 		writeStmt(hppBw, 0, "};");
 		writeStmt(hppBw, 0, "");
 
@@ -511,6 +521,12 @@ public class CppModBuilder extends OutputBuilder {
 		writeStmt(hppBw, 0, "#endif");
 		writeStmt(hppBw, 0, "    rdata.clear();");
 		writeStmt(hppBw, 0, "    return 8;" );
+		writeStmt(hppBw, 0, "}");
+		writeStmt(hppBw, 0, "");
+
+		writeStmt(hppBw, 0, "template<typename T>");
+		writeStmt(hppBw, 0, "void ordt_addr_elem_array<T>::lock_and_reset() {");
+		writeStmt(hppBw, 0, "    for (auto& el : *this) el.lock_and_reset();");
 		writeStmt(hppBw, 0, "}");
 		writeStmt(hppBw, 0, "");
 	}
